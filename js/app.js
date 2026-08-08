@@ -85,25 +85,20 @@ function loadLocal(){
 let saveTimer = null;
 function persist(){
   try{
+    // cópia local: cache temporário pra caso o banco fique indisponível — nunca a fonte principal
     localStorage.setItem("crmVwData", JSON.stringify(state));
-    if (supabaseClient){
-      document.getElementById("saveStatus").textContent = "🟡 Sincronizando…";
-      document.getElementById("saveStatus").className = "pending";
-    } else {
-      document.getElementById("saveStatus").textContent = "💾 Salvo neste navegador";
-      document.getElementById("saveStatus").className = "ok";
-    }
   }catch(err){
     console.error("Erro ao salvar no localStorage:", err);
-    document.getElementById("saveStatus").textContent = "⚠️ Armazenamento cheio - não salvou";
+    document.getElementById("saveStatus").textContent = "⚠️ Armazenamento local cheio (a gravação no banco continua normal)";
     document.getElementById("saveStatus").className = "err";
-    alert("Não consegui salvar: o armazenamento do navegador está cheio. Tente exportar/limpar dados antigos e tente novamente.");
   }
   if (dirHandle){
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveToFolder, 400);
   }
-  syncEstadoNuvem(false);
+  document.getElementById("saveStatus").textContent = "🟡 Salvando no banco…";
+  document.getElementById("saveStatus").className = "pending";
+  syncEstadoNuvem();
 }
 
 document.getElementById("btnFazerLogin").addEventListener("click", async ()=>{
@@ -112,7 +107,7 @@ document.getElementById("btnFazerLogin").addEventListener("click", async ()=>{
   const erroEl = document.getElementById("loginErro");
   erroEl.textContent = "";
   if (!email || !senha){ erroEl.textContent = "Preencha email e senha."; return; }
-  if (!supabaseClient){ erroEl.textContent = "Sincronização em nuvem não configurada."; return; }
+  if (!supabaseClient){ erroEl.textContent = "Sem conexão com o banco de dados no momento. Tente novamente em instantes."; return; }
   const btn = document.getElementById("btnFazerLogin");
   btn.disabled = true; btn.textContent = "Entrando…";
   try{
@@ -150,24 +145,18 @@ document.getElementById("btnCriarVendedor").addEventListener("click", async ()=>
     statusEl.textContent = "Preencha email e uma senha com pelo menos 6 caracteres.";
     return;
   }
-  const cfg = carregarConfigNuvem();
-  if (!cfg || !cfg.url || !cfg.key){
-    statusEl.style.color = "var(--red)";
-    statusEl.textContent = "Configure a sincronização em nuvem primeiro.";
-    return;
-  }
   const btn = document.getElementById("btnCriarVendedor");
   btn.disabled = true;
   statusEl.style.color = "";
   statusEl.textContent = "Criando…";
   try{
     // Cliente temporário e separado, para não derrubar a sessão de quem está logado agora.
-    const tempClient = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession:false, autoRefreshToken:false } });
+    const tempClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession:false, autoRefreshToken:false } });
     const { data, error } = await tempClient.auth.signUp({ email, password: senha });
     if (error) throw error;
     if (!state.vendedores) state.vendedores = [];
     state.vendedores.push({ email, nome, ativo:true, criadoEm: new Date().toISOString() });
-    persist(); syncEstadoNuvem(true); renderVendedores();
+    persist(); renderVendedores();
     statusEl.style.color = "var(--green)";
     statusEl.textContent = "Vendedor criado! Já pode fazer login.";
     document.getElementById("novoVendedorNome").value = "";
@@ -181,32 +170,6 @@ document.getElementById("btnCriarVendedor").addEventListener("click", async ()=>
   }
 });
 
-document.getElementById("btnConectarNuvem").addEventListener("click", async ()=>{
-  const url = document.getElementById("syncUrl").value.trim();
-  const key = document.getElementById("syncKey").value.trim();
-  const workspace = document.getElementById("syncWorkspace").value.trim();
-  if (!url || !key || !workspace){ alert("Preencha os 3 campos: Project URL, chave anon public e código da loja."); return; }
-  salvarConfigNuvem({ url, key, workspace });
-  iniciarClienteNuvem();
-  await verificarSessaoLogin();
-});
-document.getElementById("btnDesconectarNuvem").addEventListener("click", ()=>{
-  if (!confirm("Desconectar da nuvem? Os dados continuam salvos neste navegador, mas param de sincronizar com os outros.")) return;
-  localStorage.removeItem("crmVwSyncConfig");
-  supabaseClient = null;
-  nuvemAssinaturaAtiva = false;
-  document.getElementById("syncUrl").value = "";
-  document.getElementById("syncKey").value = "";
-  document.getElementById("syncWorkspace").value = "";
-  statusNuvem("💾 Salvo neste navegador", "ok");
-});
-(function preencherCamposNuvemSalvos(){
-  const cfg = carregarConfigNuvem();
-  if (!cfg) return;
-  document.getElementById("syncUrl").value = cfg.url || "";
-  document.getElementById("syncKey").value = cfg.key || "";
-  document.getElementById("syncWorkspace").value = cfg.workspace || "";
-})();
 document.getElementById("btnCompMes").addEventListener("click", ()=>{ competicaoCarrosEscopo="mes"; renderCompeticaoCarros(); });
 document.getElementById("btnCompGeral").addEventListener("click", ()=>{ competicaoCarrosEscopo="geral"; renderCompeticaoCarros(); });
 document.getElementById("btnRelatorioLigacoesPdf").addEventListener("click", imprimirRelatorioLigacoes);
@@ -1157,5 +1120,9 @@ document.getElementById("formPonto").addEventListener("submit", e=>{
 });
 
 tryRestoreFolder().then(renderAll);
-renderAll();
-if (iniciarClienteNuvem()){ verificarSessaoLogin(); }
+renderAll(); // mostra a cópia local instantaneamente enquanto o banco ainda está carregando
+if (iniciarClienteNuvem()){
+  carregarEstadoNuvem().then(verificarSessaoLogin);
+} else {
+  statusNuvem("🔴 Sem conexão com o banco — usando cópia local temporária", "err");
+}

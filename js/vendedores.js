@@ -29,7 +29,7 @@ function garantirVendedorNaLista(){
   if (!v){
     v = { email: currentVendedorEmail, nome: "", ativo: true, criadoEm: new Date().toISOString() };
     state.vendedores.push(v);
-    persist(); syncEstadoNuvem(true);
+    persist();
   }
   return v;
 }
@@ -53,5 +53,5 @@ function toggleVendedorAtivo(idx){
   const v = state.vendedores[idx];
   if (!v) return;
   v.ativo = v.ativo===false ? true : false;
-  persist(); syncEstadoNuvem(true); renderVendedores();
+  persist(); renderVendedores();
 }

@@ -2,11 +2,10 @@
 
 function assinarMudancasRemotas(){
   if (!supabaseClient || nuvemAssinaturaAtiva) return;
-  const cfg = carregarConfigNuvem();
   nuvemAssinaturaAtiva = true;
   supabaseClient
-    .channel("crm_estado_"+cfg.workspace)
-    .on("postgres_changes", { event:"UPDATE", schema:"public", table:"crm_estado", filter:`id=eq.${cfg.workspace}` }, payload=>{
+    .channel("crm_estado_"+WORKSPACE_ID)
+    .on("postgres_changes", { event:"UPDATE", schema:"public", table:"crm_estado", filter:`id=eq.${WORKSPACE_ID}` }, payload=>{
       if (ignorarProximoEventoRemoto){ ignorarProximoEventoRemoto = false; return; }
       if (payload.new && payload.new.dados){
         state = payload.new.dados;

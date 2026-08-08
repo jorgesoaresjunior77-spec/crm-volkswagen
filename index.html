@@ -1241,28 +1241,12 @@
       <button class="ghost" id="btnLimpar">🗑️ Apagar todos os dados</button>
     </div>
     <div class="panel">
-      <h2>☁️ Sincronização em Nuvem <span>compartilhe os dados entre você e os vendedores, em qualquer computador</span></h2>
+      <h2>☁️ Banco de Dados <span>computador, celular e qualquer navegador sempre veem os mesmos dados</span></h2>
       <p style="font-size:13px;color:var(--grey-dark)">
-        Com isso conectado, os dados deixam de ficar presos neste computador: todos que usarem o mesmo link e o mesmo
-        "código da loja" abaixo enxergam e editam os mesmos dados, quase em tempo real. Sem isso, o app continua
-        funcionando normalmente, só que salvando apenas neste navegador.
+        O CRM salva automaticamente no banco de dados a cada alteração — não existe botão de "sincronizar",
+        isso acontece sozinho. O status atual aparece no topo da tela (ao lado do menu).
+        Se a internet cair, o navegador guarda uma cópia temporária e envia assim que a conexão voltar.
       </p>
-      <p style="font-size:12.5px;color:var(--grey-dark)">
-        Passo a passo pra pegar os 2 primeiros campos: crie uma conta grátis em
-        <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> → crie um projeto → rode a
-        instrução SQL que o Claude te passou (cria a tabela) → em <b>Project Settings → API</b>, copie a
-        <b>Project URL</b> e a chave <b>anon public</b>.
-      </p>
-      <div class="metagrid">
-        <div><label>Project URL (Supabase)</label><input type="text" id="syncUrl" placeholder="https://xxxxxxxx.supabase.co"></div>
-        <div><label>Chave anon public (Supabase)</label><input type="text" id="syncKey" placeholder="eyJhbGciOi..."></div>
-        <div><label>Código da loja <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">— use o MESMO em todos os computadores que devem compartilhar dados</span></label><input type="text" id="syncWorkspace" placeholder="Ex: motomecanica-lajeado"></div>
-      </div>
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <button class="primary" id="btnConectarNuvem" style="width:auto;">☁️ Conectar e sincronizar</button>
-        <button class="ghost" id="btnDesconectarNuvem" style="width:auto;">Desconectar</button>
-        <span id="syncStatusConfig" style="font-size:12.5px;font-weight:700;"></span>
-      </div>
     </div>
     <div class="panel">
       <h2>👥 Vendedores <span>crie e gerencie os acessos, sem precisar entrar no Supabase</span></h2>
