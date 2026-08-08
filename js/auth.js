@@ -2,26 +2,21 @@
 
 function mostrarLoginOverlay(){
   const ov = document.getElementById("loginOverlay");
+  const app = document.getElementById("appShell");
   if (ov) ov.style.display = "flex";
+  if (app) app.style.display = "none";
 }
 function esconderLoginOverlay(){
   const ov = document.getElementById("loginOverlay");
+  const app = document.getElementById("appShell");
   if (ov) ov.style.display = "none";
+  if (app) app.style.display = "block";
 }
 async function verificarSessaoLogin(){
-  if (!supabaseClient){ esconderLoginOverlay(); return; }
+  if (!supabaseClient){ mostrarLoginOverlay(); return; }
   const { data } = await supabaseClient.auth.getSession();
   if (data && data.session){
-    currentVendedorEmail = data.session.user.email;
-    await carregarEstadoNuvem();
-    const v = garantirVendedorNaLista();
-    if (v.ativo === false){
-      await fazerLogoutVendedor();
-      document.getElementById("loginErro").textContent = "Seu acesso foi desativado. Fale com o gerente.";
-      return;
-    }
-    esconderLoginOverlay();
-    atualizarInfoVendedorLogado();
+    await autenticarEControlarAcesso(data.session.user);
   } else {
     atualizarInfoVendedorLogado();
     mostrarLoginOverlay();

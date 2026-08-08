@@ -23,8 +23,6 @@ const DEFAULT_STATE = {
 };
 
 let state = null;
-let dirHandle = null;
-const DB_NAME = "crmVwDB", STORE = "handles";
 
 function normalizeVendas(vendas){
   return (vendas || []).map(v=>{
@@ -76,26 +74,12 @@ function aplicarAjustesDeCompatibilidade(){
   state.config.mesRef = todayISO().slice(0,7);
 }
 
-function loadLocal(){
-  const raw = localStorage.getItem("crmVwData");
-  state = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT_STATE));
+function inicializarEstadoPadrao(){
+  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
   aplicarAjustesDeCompatibilidade();
 }
 
-let saveTimer = null;
 function persist(){
-  try{
-    // cópia local: cache temporário pra caso o banco fique indisponível — nunca a fonte principal
-    localStorage.setItem("crmVwData", JSON.stringify(state));
-  }catch(err){
-    console.error("Erro ao salvar no localStorage:", err);
-    document.getElementById("saveStatus").textContent = "⚠️ Armazenamento local cheio (a gravação no banco continua normal)";
-    document.getElementById("saveStatus").className = "err";
-  }
-  if (dirHandle){
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveToFolder, 400);
-  }
   document.getElementById("saveStatus").textContent = "🟡 Salvando no banco…";
   document.getElementById("saveStatus").className = "pending";
   syncEstadoNuvem();
@@ -113,16 +97,8 @@ document.getElementById("btnFazerLogin").addEventListener("click", async ()=>{
   try{
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
     if (error) throw error;
-    currentVendedorEmail = data.user.email;
-    await carregarEstadoNuvem();
-    const v = garantirVendedorNaLista();
-    if (v.ativo === false){
-      await fazerLogoutVendedor();
-      erroEl.textContent = "Seu acesso foi desativado. Fale com o gerente.";
-      return;
-    }
-    esconderLoginOverlay();
-    atualizarInfoVendedorLogado();
+    const liberado = await autenticarEControlarAcesso(data.user);
+    if (!liberado) return;
   }catch(err){
     erroEl.textContent = "Email ou senha incorretos.";
   }finally{
@@ -154,9 +130,12 @@ document.getElementById("btnCriarVendedor").addEventListener("click", async ()=>
     const tempClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession:false, autoRefreshToken:false } });
     const { data, error } = await tempClient.auth.signUp({ email, password: senha });
     if (error) throw error;
-    if (!state.vendedores) state.vendedores = [];
-    state.vendedores.push({ email, nome, ativo:true, criadoEm: new Date().toISOString() });
-    persist(); renderVendedores();
+    // O gatilho no banco já criou o perfil (inativo, por padrão). Como quem está
+    // criando agora é um admin, ativa na hora e preenche o nome.
+    const { error: perfilError } = await supabaseClient
+      .from("profiles").update({ ativo: true, nome }).eq("id", data.user.id);
+    if (perfilError) throw perfilError;
+    await carregarListaVendedoresAdmin();
     statusEl.style.color = "var(--green)";
     statusEl.textContent = "Vendedor criado! Já pode fazer login.";
     document.getElementById("novoVendedorNome").value = "";
@@ -932,11 +911,6 @@ document.getElementById("btnSalvarConfig").addEventListener("click", ()=>{
   alert("Configurações salvas!");
 });
 
-document.getElementById("btnLimpar").addEventListener("click", ()=>{
-  if (!confirm("Isso vai apagar TODOS os dados salvos neste navegador. Tem certeza?")) return;
-  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-  persist(); renderAll();
-});
 document.getElementById("olhoComissaoBtn").addEventListener("click", (e)=>{
   e.stopPropagation();
   comissaoVisivel = !comissaoVisivel;
@@ -968,70 +942,12 @@ document.addEventListener("click", (e)=>{
   }
 });
 
-document.getElementById("btnFolder").addEventListener("click", ()=>{
-  if (dirHandle && folderNeedsReconnect) reconnectFolder();
-  else chooseFolder();
-});
-
 document.getElementById("extMes").value = state && state.config ? state.config.mesRef : new Date().toISOString().slice(0,7);
 document.getElementById("btnExtratoAtualizar").addEventListener("click", renderExtrato);
 document.getElementById("btnImprimir").addEventListener("click", ()=>{ renderExtrato(); window.print(); });
 
-document.getElementById("btnExport").addEventListener("click", ()=>{
-  const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `crm-vendas-backup-${todayISO()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-document.getElementById("btnImport").addEventListener("click", ()=>{
-  const input = document.getElementById("fileImport");
-  input.value = ""; // garante que selecionar o MESMO arquivo de novo ainda dispare o "change"
-  input.click();
-});
-document.getElementById("fileImport").addEventListener("change", e=>{
-  const file = e.target.files[0];
-  if (!file){ console.warn("Nenhum arquivo selecionado."); return; }
-  const reader = new FileReader();
-  reader.onerror = ()=>{
-    alert("Não consegui ler esse arquivo. Tente novamente ou selecione o arquivo de novo.");
-  };
-  reader.onload = ev=>{
-    try{
-      const imported = JSON.parse(ev.target.result);
-      state = imported;
-      state.config = Object.assign({}, DEFAULT_STATE.config, state.config||{});
-      state.dias = normalizeDias(state.dias || {});
-      state.clientes = (state.clientes || []).map(c=>({...c, historico: c.historico || []}));
-      state.propostas = state.propostas || [];
-      state.vendas = normalizeVendas(state.vendas);
-      state.agenda = state.agenda || [];
-      state.salarios = state.salarios || [];
-      state.ponto = state.ponto || {};
-      state.humor = state.humor || {};
-      state.feriadosCustom = state.feriadosCustom || [];
-      state.aniversarios = state.aniversarios || [];
-      state.postagens = state.postagens || [];
-  state.metasVolks = state.metasVolks || {};
-      inicializarEstadoGerente();
-      inicializarEstadoBancoVW();
-  inicializarEstadoDocumentos();
-      persist(); renderAll();
-      alert(`Backup importado com sucesso! ${state.clientes.length} clientes, ${state.propostas.length} propostas, ${state.vendas.length} vendas, ${Object.keys(state.dias).length} dias com lançamentos.`);
-    }catch(err){
-      console.error("Erro ao importar backup:", err);
-      alert("Não consegui importar esse arquivo. Ele pode estar corrompido ou não é um backup válido deste CRM.\n\nDetalhe técnico: "+err.message);
-    }finally{
-      e.target.value = ""; // libera o campo para permitir selecionar o mesmo arquivo novamente no futuro
-    }
-  };
-  reader.readAsText(file);
-});
-
 /* ============================= INIT ============================= */
-loadLocal();
+inicializarEstadoPadrao();
 popularSelectsSalario();
 maskCurrency(document.getElementById("salValor"));
 document.getElementById("formSalario").addEventListener("submit", e=>{
@@ -1119,10 +1035,10 @@ document.getElementById("formPonto").addEventListener("submit", e=>{
   fecharPontoModal();
 });
 
-tryRestoreFolder().then(renderAll);
-renderAll(); // mostra a cópia local instantaneamente enquanto o banco ainda está carregando
+renderAll(); // estado padrão inicial, enquanto verifica sessão/carrega do banco
 if (iniciarClienteNuvem()){
-  carregarEstadoNuvem().then(verificarSessaoLogin);
+  verificarSessaoLogin();
 } else {
-  statusNuvem("🔴 Sem conexão com o banco — usando cópia local temporária", "err");
+  statusNuvem("🔴 Sem conexão com o banco de dados", "err");
+  mostrarLoginOverlay();
 }
