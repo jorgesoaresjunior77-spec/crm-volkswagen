@@ -550,7 +550,21 @@ document.querySelectorAll("nav button[data-view]").forEach(btn=>{
     document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("view-"+btn.dataset.view).classList.add("active");
+    fecharMenuMobile();
   });
+});
+// Menu hambúrguer (mobile/tablet): o nav em si continua o mesmo, só colapsa via CSS.
+function fecharMenuMobile(){
+  const nav = document.getElementById("navPrincipal");
+  const btn = document.getElementById("btnNavToggle");
+  if (!nav || !btn) return;
+  nav.classList.remove("nav-open");
+  btn.setAttribute("aria-expanded","false");
+}
+document.getElementById("btnNavToggle").addEventListener("click", ()=>{
+  const nav = document.getElementById("navPrincipal");
+  const aberto = nav.classList.toggle("nav-open");
+  document.getElementById("btnNavToggle").setAttribute("aria-expanded", aberto ? "true" : "false");
 });
 popularSeletorMesAno();
 popularProdutosFinanciamento();

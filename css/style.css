@@ -151,6 +151,7 @@
   }
   nav button:hover{ color:#fff; transform:translateY(-2px); box-shadow:5px 5px 12px rgba(3,8,20,.6); border-color:#F7C600; }
   nav button.active{ background:linear-gradient(135deg,#E10600,#9E0000); border-color:#F7C600; }
+  .nav-toggle{ display:none; }
 
   main{ padding:6px 24px 24px; max-width:1300px; margin:0 auto; position:relative; z-index:1; }
   .view{ display:none; }
@@ -792,6 +793,18 @@
   .insta-insights-list li{ margin-bottom:4px; }
   .insta-insights-list b{ color:var(--graphite); }
 
+  /* ===== Menu: hambúrguer em telas estreitas (tablet retrato e celular) ===== */
+  @media (max-width:880px){
+    nav{ flex-wrap:wrap; row-gap:8px; width:calc(100% - 20px); padding:8px 10px; }
+    .nav-toggle{
+      display:flex; align-items:center; justify-content:center; gap:8px; width:100%; order:-1;
+      padding:11px 14px; font-size:12.5px; border-radius:10px;
+    }
+    nav button[data-view]{ display:none; width:100%; text-align:center; padding:13px 10px; font-size:13px; order:1; }
+    nav.nav-open button[data-view]{ display:flex; align-items:center; justify-content:center; }
+    nav .header-topright{ order:2; width:100%; justify-content:center; margin-left:0; flex-wrap:wrap; }
+  }
+
   @media (max-width:640px){
     header{ padding:16px 18px; border-radius:0 0 18px 18px; }
     header h1{ font-size:17px; }
@@ -802,10 +815,197 @@
     main{ padding:14px; }
     .panel{ padding:16px; border-radius:16px; }
     .card{ border-radius:16px; padding:16px; }
-    nav{ padding:12px 10px; width:calc(100% - 20px); margin-top:2px; overflow-x:auto; overflow-y:hidden; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
-    nav::-webkit-scrollbar{ display:none; }
-    nav button{ padding:1px 8px; font-size:10.5px; }
     button.primary{ padding:11px 18px; }
+  }
+
+  /* ===== Grids com colunas fixas que ainda não tinham fallback para telas pequenas ===== */
+  @media (max-width:480px){
+    .humor-btns-row{ grid-template-columns:1fr; }
+    .insta-kpis-grid{ grid-template-columns:1fr; }
+    .insta-stats-grid{ grid-template-columns:1fr; }
+    .taxa-row-grid{ grid-template-columns:1fr; }
+  }
+
+  /* ===== Modais e login: nunca maiores que a viewport, com folga menor em telas pequenas ===== */
+  @media (max-width:480px){
+    .proposta-modal-overlay{ padding:10px; }
+    .proposta-modal-box{ max-width:calc(100vw - 20px) !important; max-height:calc(100vh - 20px); }
+    #loginOverlay > div{ padding:20px; max-width:calc(100vw - 24px); }
+  }
+
+  /* ===== Tabelas "matriz" (muitas colunas por natureza: Controle Diário e Resumo de Salário por Mês) =====
+     Convertê-las em cards fragmentaria uma grade de comparação dia-a-dia/mês-a-mês em dezenas de
+     mini-cards, o que piora a leitura. Mantemos rolagem HORIZONTAL, mas contida dentro do próprio
+     quadro (nunca a página toda) e com a primeira coluna fixa, pra nunca perder a referência. */
+  .mobile-scroll-hint{ display:none; }
+  @media (max-width:900px){
+    .mobile-scroll-hint{
+      display:block; text-align:center; font-size:11px; font-weight:800; color:var(--orange-deep);
+      background:var(--orange-tint); border-radius:8px; padding:6px 10px; margin:-6px 0 12px;
+    }
+    #controleTable th:first-child, #controleTable td:first-child,
+    #tblSalariosMes th:first-child, #tblSalariosMes td:first-child{
+      position:sticky; left:0; z-index:2; background:var(--card); box-shadow:2px 0 6px rgba(0,0,0,.08);
+    }
+    #controleTable th:first-child, #tblSalariosMes th:first-child{ z-index:3; background:var(--card-tint); }
+  }
+
+  /* ===== Tabelas -> cards no mobile (mesmos dados, mesmos cálculos — só a apresentação muda) =====
+     Técnica somente em CSS: como as linhas são geradas por JS, os rótulos de cada coluna são
+     recriados via nth-child na mesma ordem das colunas do <thead> original (não mexe no JS). */
+  @media (max-width:900px){
+    #vendasTable thead, #extratoTable thead, #clientesTable thead{ display:none; }
+    #vendasTable, #vendasTable tbody,
+    #extratoTable, #extratoTable tbody,
+    #clientesTable, #clientesTable tbody{ display:block; width:100%; }
+    #vendasTable tbody tr, #extratoTable tbody tr, #clientesTable tbody tr{
+      display:block; width:100%; border:1px solid var(--border-light); border-radius:12px;
+      padding:8px 10px; margin-bottom:12px; background:var(--card); box-shadow:var(--shadow-corner-sm);
+    }
+    #vendasTable tbody td, #extratoTable tbody td, #clientesTable tbody td{
+      display:block; width:100%; text-align:right; position:relative;
+      padding:7px 4px 7px 46%; border:none; border-bottom:1px dashed var(--border-light); min-height:18px; font-size:12.5px;
+    }
+    #vendasTable tbody td:last-child, #extratoTable tbody td:last-child, #clientesTable tbody td:last-child{ border-bottom:none; }
+    #vendasTable tbody td::before, #extratoTable tbody td::before, #clientesTable tbody td::before{
+      position:absolute; left:4px; top:7px; text-align:left; font-weight:800; color:var(--graphite-2);
+      font-size:9px; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap;
+    }
+
+    #vendasTable td:nth-child(1)::before{ content:"Data"; }
+    #vendasTable td:nth-child(2)::before{ content:"Carro"; }
+    #vendasTable td:nth-child(3)::before{ content:"Modelo"; }
+    #vendasTable td:nth-child(4)::before{ content:"Versão"; }
+    #vendasTable td:nth-child(5)::before{ content:"Cor"; }
+    #vendasTable td:nth-child(6)::before{ content:"Ano"; }
+    #vendasTable td:nth-child(7)::before{ content:"Origem"; }
+    #vendasTable td:nth-child(8)::before{ content:"Cliente"; }
+    #vendasTable td:nth-child(9)::before{ content:"Valor"; }
+    #vendasTable td:nth-child(10)::before{ content:"Tipo"; }
+    #vendasTable td:nth-child(11)::before{ content:"Emplac."; }
+    #vendasTable td:nth-child(12)::before{ content:"Pontuação"; }
+    #vendasTable td:nth-child(13)::before{ content:"Retorno Banco"; }
+    #vendasTable td:nth-child(14)::before{ content:"Comissão"; }
+    #vendasTable td:nth-child(15)::before{ content:"Total"; }
+    #vendasTable td:nth-child(16){ text-align:left; padding-left:4px; display:flex; gap:6px; flex-wrap:wrap; }
+
+    #extratoTable td:nth-child(1)::before{ content:"Data"; }
+    #extratoTable td:nth-child(2)::before{ content:"Carro"; }
+    #extratoTable td:nth-child(3)::before{ content:"Modelo"; }
+    #extratoTable td:nth-child(4)::before{ content:"Versão"; }
+    #extratoTable td:nth-child(5)::before{ content:"Cliente"; }
+    #extratoTable td:nth-child(6)::before{ content:"Valor"; }
+    #extratoTable td:nth-child(7)::before{ content:"Tipo"; }
+    #extratoTable td:nth-child(8)::before{ content:"Emplac."; }
+    #extratoTable td:nth-child(9)::before{ content:"Retorno Banco"; }
+    #extratoTable td:nth-child(10)::before{ content:"Comissão"; }
+    #extratoTable td:nth-child(11)::before{ content:"Total"; }
+
+    #clientesTable td:nth-child(1)::before{ content:"Nome"; }
+    #clientesTable td:nth-child(2)::before{ content:"Telefone"; }
+    #clientesTable td:nth-child(3)::before{ content:"Cidade"; }
+    #clientesTable td:nth-child(4)::before{ content:"Veículo"; }
+    #clientesTable td:nth-child(5)::before{ content:"Valor"; }
+    #clientesTable td:nth-child(6)::before{ content:"Origem"; }
+    #clientesTable td:nth-child(7)::before{ content:"Último Contato"; }
+    #clientesTable td:nth-child(8)::before{ content:"Obs"; }
+    #clientesTable td:nth-child(9)::before{ content:"Dias sem Contato"; }
+    #clientesTable td:nth-child(10){ text-align:left; padding-left:4px; }
+    #clientesTable td:nth-child(11){ text-align:left; padding-left:4px; }
+
+    /* tfoot (totais): colspan não mapeia 1:1 com as colunas do nth-child acima, então aqui vira
+       um bloco de resumo simples (mesmos valores, sem rótulo por campo) em vez de forçar rótulos errados. */
+    #vendasTable tfoot td, #extratoTable tfoot td{
+      display:block; width:100%; text-align:right; padding:5px 8px; border:none; font-size:12px;
+    }
+
+    /* linhas de "nenhum registro ainda" (colspan) não são dados de coluna — sem rótulo, texto centralizado */
+    #vendasTable td.empty, #extratoTable td.empty, #clientesTable td.empty{ text-align:center; padding-left:4px; }
+    #vendasTable td.empty::before, #extratoTable td.empty::before, #clientesTable td.empty::before{ content:none; }
+  }
+
+  @media (max-width:640px){
+    #tblAniversarios thead, #vendedoresTable thead, #tblBancoVW thead,
+    #tblSalarios thead, #tblPonto thead,
+    #tblEmplacamentos thead, #tblAcessorios thead, #tblSeguro thead{ display:none; }
+    #tblAniversarios, #tblAniversarios tbody,
+    #vendedoresTable, #vendedoresTable tbody,
+    #tblBancoVW, #tblBancoVW tbody,
+    #tblSalarios, #tblSalarios tbody,
+    #tblPonto, #tblPonto tbody,
+    #tblEmplacamentos, #tblEmplacamentos tbody,
+    #tblAcessorios, #tblAcessorios tbody,
+    #tblSeguro, #tblSeguro tbody{ display:block; width:100%; }
+    #tblAniversarios tbody tr, #vendedoresTable tbody tr, #tblBancoVW tbody tr,
+    #tblSalarios tbody tr, #tblPonto tbody tr,
+    #tblEmplacamentos tbody tr, #tblAcessorios tbody tr, #tblSeguro tbody tr{
+      display:block; width:100%; border:1px solid var(--border-light); border-radius:12px;
+      padding:8px 10px; margin-bottom:10px; background:var(--card); box-shadow:var(--shadow-corner-sm);
+    }
+    #tblAniversarios tbody td, #vendedoresTable tbody td, #tblBancoVW tbody td,
+    #tblSalarios tbody td, #tblPonto tbody td,
+    #tblEmplacamentos tbody td, #tblAcessorios tbody td, #tblSeguro tbody td{
+      display:block; width:100%; text-align:right; position:relative;
+      padding:7px 4px 7px 42%; border:none; border-bottom:1px dashed var(--border-light); min-height:18px; font-size:12.5px;
+    }
+    #tblAniversarios tbody td:last-child, #vendedoresTable tbody td:last-child, #tblBancoVW tbody td:last-child,
+    #tblSalarios tbody td:last-child, #tblPonto tbody td:last-child,
+    #tblEmplacamentos tbody td:last-child, #tblAcessorios tbody td:last-child, #tblSeguro tbody td:last-child{ border-bottom:none; }
+    #tblAniversarios tbody td::before, #vendedoresTable tbody td::before, #tblBancoVW tbody td::before,
+    #tblSalarios tbody td::before, #tblPonto tbody td::before,
+    #tblEmplacamentos tbody td::before, #tblAcessorios tbody td::before, #tblSeguro tbody td::before{
+      position:absolute; left:4px; top:7px; text-align:left; font-weight:800; color:var(--graphite-2);
+      font-size:9px; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap;
+    }
+
+    #tblAniversarios td:nth-child(1)::before{ content:"Data"; }
+    #tblAniversarios td:nth-child(2)::before{ content:"Cliente"; }
+    #tblAniversarios td:nth-child(3)::before{ content:"WhatsApp"; }
+    #tblAniversarios td:nth-child(4)::before{ content:"Nasc."; }
+    #tblAniversarios td:nth-child(5)::before{ content:"Idade"; }
+    #tblAniversarios td:nth-child(6)::before{ content:"Obs"; }
+    #tblAniversarios td:nth-child(7){ text-align:left; padding-left:4px; }
+
+    #vendedoresTable td:nth-child(1)::before{ content:"Nome"; }
+    #vendedoresTable td:nth-child(2)::before{ content:"Email"; }
+    #vendedoresTable td:nth-child(3)::before{ content:"Status"; }
+    #vendedoresTable td:nth-child(4)::before{ content:"Perfil"; }
+    #vendedoresTable td:nth-child(5)::before{ content:"Cadastro"; }
+    #vendedoresTable td:nth-child(6){ text-align:left; padding-left:4px; }
+
+    #tblBancoVW td:nth-child(1)::before{ content:"Data"; }
+    #tblBancoVW td:nth-child(2)::before{ content:"Origem"; }
+    #tblBancoVW td:nth-child(3)::before{ content:"Tabela"; }
+    #tblBancoVW td:nth-child(4)::before{ content:"Valor Financiado"; }
+    #tblBancoVW td:nth-child(5)::before{ content:"Pontos"; }
+    #tblBancoVW td:nth-child(6)::before{ content:"Prêmio"; }
+    #tblBancoVW td:nth-child(7){ text-align:left; padding-left:4px; }
+    #tblBancoVW tfoot td{ display:block; width:100%; text-align:right; padding:5px 8px; border:none; font-size:12px; }
+
+    #tblSalarios td:nth-child(1)::before{ content:"Data"; }
+    #tblSalarios td:nth-child(2)::before{ content:"Tipo"; }
+    #tblSalarios td:nth-child(3)::before{ content:"Origem"; }
+    #tblSalarios td:nth-child(4)::before{ content:"Valor"; }
+    #tblSalarios td:nth-child(5){ text-align:left; padding-left:4px; }
+
+    #tblPonto td:nth-child(1)::before{ content:"Data"; }
+    #tblPonto td:nth-child(2)::before{ content:"Entrada"; }
+    #tblPonto td:nth-child(3)::before{ content:"Saída"; }
+    #tblPonto td:nth-child(4)::before{ content:"Viagem"; }
+    #tblPonto td:nth-child(5)::before{ content:"Observações"; }
+
+    #tblEmplacamentos td:nth-child(1)::before, #tblAcessorios td:nth-child(1)::before, #tblSeguro td:nth-child(1)::before{ content:"Data"; }
+    #tblEmplacamentos td:nth-child(2)::before, #tblAcessorios td:nth-child(2)::before, #tblSeguro td:nth-child(2)::before{ content:"Cliente"; }
+    #tblEmplacamentos td:nth-child(3)::before, #tblAcessorios td:nth-child(3)::before, #tblSeguro td:nth-child(3)::before{ content:"Carro"; }
+    #tblEmplacamentos td:nth-child(4)::before, #tblAcessorios td:nth-child(4)::before, #tblSeguro td:nth-child(4)::before{ content:"Valor"; }
+    #tblEmplacamentos td:nth-child(5)::before, #tblAcessorios td:nth-child(5)::before, #tblSeguro td:nth-child(5)::before{ content:"Pago"; }
+
+    #tblAniversarios td.empty, #vendedoresTable td.empty, #tblBancoVW td.empty,
+    #tblSalarios td.empty, #tblPonto td.empty,
+    #tblEmplacamentos td.empty, #tblAcessorios td.empty, #tblSeguro td.empty{ text-align:center; padding-left:4px; }
+    #tblAniversarios td.empty::before, #vendedoresTable td.empty::before, #tblBancoVW td.empty::before,
+    #tblSalarios td.empty::before, #tblPonto td.empty::before,
+    #tblEmplacamentos td.empty::before, #tblAcessorios td.empty::before, #tblSeguro td.empty::before{ content:none; }
   }
 
   @media print{
