@@ -40,6 +40,16 @@
   }
   *{box-sizing:border-box;}
   html,body{ overflow-x:hidden; max-width:100%; }
+  /* Rede de segurança contra textos sem espaço (emails, links, nomes colados) que
+     poderiam forçar um elemento a ficar mais largo que a tela no celular. Não afeta
+     nada que já cabe normalmente — só entra em ação se uma palavra não couber. */
+  img, video, iframe{ max-width:100%; height:auto; }
+  svg, canvas{ max-width:100%; }
+  p, td, th, .card .label, .card .value, .panel h2, .empty, .folder-note, .nota-g,
+  .post-card-titulo, .post-card-secao-texto, .financ-item-nome, .financ-item-sub,
+  .prop-grid b, .prop-summary-cliente, .prop-summary-veh, .prop-summary-pacotes,
+  .g-lin, .data-especial-msg, .data-especial-texto, .comissao-col-value,
+  input, select, textarea, button{ overflow-wrap:anywhere; }
   ::selection{ background:var(--orange); color:#fff; }
   ::-webkit-scrollbar{ width:10px; height:10px; }
   ::-webkit-scrollbar-track{ background:#0a0a12; }
@@ -415,9 +425,10 @@
   .prop-vendedor-nome{ font-weight:800; font-size:14px; color:var(--graphite); }
   .prop-vendedor-whats{ font-size:12.5px; color:var(--text-dim); margin-top:2px; }
   .prop-card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:6px; }
-  .prop-card-cliente{ font-weight:800; font-size:14px; color:var(--graphite); }
-  .prop-card-sub{ font-size:11.5px; color:var(--text-dim); margin-top:2px; }
-  .prop-card-date{ font-size:11px; font-weight:700; color:var(--text-mute); white-space:nowrap; }
+  .prop-card-head > div:first-child{ min-width:0; flex:1; }
+  .prop-card-cliente{ font-weight:800; font-size:14px; color:var(--graphite); overflow-wrap:anywhere; }
+  .prop-card-sub{ font-size:11.5px; color:var(--text-dim); margin-top:2px; overflow-wrap:anywhere; }
+  .prop-card-date{ font-size:11px; font-weight:700; color:var(--text-mute); white-space:nowrap; flex-shrink:0; }
   .prop-card-veh{ font-size:12.5px; font-weight:800; color:var(--orange-deep); margin-bottom:12px; letter-spacing:.2px; }
   .prop-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:9px 14px; }
   .prop-grid > div{ display:flex; flex-direction:column; gap:2px; }
@@ -655,8 +666,9 @@
   .mensagem-dia-icone .raio1{ top:-8px; right:-10px; animation-delay:0s; }
   .mensagem-dia-icone .raio2{ bottom:-4px; left:-12px; font-size:13px; animation-delay:.8s; }
   @keyframes raioPisca{ 0%,100%{ opacity:.25; transform:scale(.85) rotate(-8deg); } 50%{ opacity:1; transform:scale(1.15) rotate(6deg); } }
+  .mensagem-dia-panel > div:last-child{ min-width:0; flex:1; }
   .mensagem-dia-titulo{ font-size:11px; font-weight:800; letter-spacing:.8px; color:#00E5FF; text-transform:uppercase; margin-bottom:4px; }
-  .mensagem-dia-texto{ font-size:13px; line-height:1.6; color:rgba(255,255,255,.9); }
+  .mensagem-dia-texto{ font-size:13px; line-height:1.6; color:rgba(255,255,255,.9); overflow-wrap:anywhere; }
 
   #datasEspeciaisWrap{ display:flex; flex-direction:column; gap:10px; margin:14px 0; }
   .data-especial-panel{
