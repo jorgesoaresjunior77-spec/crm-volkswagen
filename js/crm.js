@@ -1610,7 +1610,7 @@ function renderControle(){
       const subRows = entradas.map((e,idx)=>{
         const hora = e.ts ? new Date(e.ts).toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}) : `#${idx+1}`;
         const ligTotalEntrada = (Number(e.ligAtendCom)||0)+(Number(e.ligAtendSem)||0);
-        return `<tr style="background:rgba(20,80,196,.07);">
+        return `<tr class="controle-sub-linha" style="background:rgba(20,80,196,.07);">
           <td colspan="2" style="text-align:right;font-size:11px;color:var(--grey-dark);">🕒 ${hora}</td>
           <td>${ligTotalEntrada}</td><td>${e.ligInvalido||0}</td><td>${e.ligNao||0}</td><td>${e.ligAtendCom||0}</td><td>${e.ligAtendSem||0}</td>
           <td>${e.wpp||0}</td><td>${e.sto||0}</td><td>${e.ree||0}</td><td>${e.feed||0}</td><td>${e.ofe||0}</td>
