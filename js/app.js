@@ -100,7 +100,12 @@ document.getElementById("btnFazerLogin").addEventListener("click", async ()=>{
     const liberado = await autenticarEControlarAcesso(data.user);
     if (!liberado) return;
   }catch(err){
-    erroEl.textContent = "Email ou senha incorretos.";
+    console.error("Erro no login:", err);
+    if (err && err.message === "Email not confirmed"){
+      erroEl.textContent = "Este e-mail ainda não foi confirmado. Fale com o administrador.";
+    } else {
+      erroEl.textContent = "Email ou senha incorretos.";
+    }
   }finally{
     btn.disabled = false; btn.textContent = "Entrar";
   }
@@ -126,15 +131,21 @@ document.getElementById("btnCriarVendedor").addEventListener("click", async ()=>
   statusEl.style.color = "";
   statusEl.textContent = "Criando…";
   try{
-    // Cliente temporário e separado, para não derrubar a sessão de quem está logado agora.
-    const tempClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession:false, autoRefreshToken:false } });
-    const { data, error } = await tempClient.auth.signUp({ email, password: senha });
-    if (error) throw error;
-    // O gatilho no banco já criou o perfil (inativo, por padrão). Como quem está
-    // criando agora é um admin, ativa na hora e preenche o nome.
-    const { error: perfilError } = await supabaseClient
-      .from("profiles").update({ ativo: true, nome }).eq("id", data.user.id);
-    if (perfilError) throw perfilError;
+    // A criação roda numa Edge Function (service_role fica só lá, nunca no navegador):
+    // ela cria o usuário no Auth já confirmado e ativa o profile, tudo em uma chamada.
+    const { data, error } = await supabaseClient.functions.invoke("create-vendedor", {
+      body: { nome, email, senha },
+    });
+    if (error){
+      // FunctionsHttpError não traz a mensagem da function em error.message —
+      // o corpo JSON real ({ error: "..." }) vem em error.context (a Response).
+      let msg = error.message;
+      if (error.context && typeof error.context.json === "function"){
+        try{ const corpo = await error.context.json(); if (corpo && corpo.error) msg = corpo.error; }catch(_e){}
+      }
+      throw new Error(msg);
+    }
+    if (data && data.error) throw new Error(data.error);
     await carregarListaVendedoresAdmin();
     statusEl.style.color = "var(--green)";
     statusEl.textContent = "Vendedor criado! Já pode fazer login.";
