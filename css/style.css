@@ -818,8 +818,10 @@
     main{ padding:0; max-width:100%; }
     .panel{ box-shadow:none; border:1px solid #ccc; }
     .card{ box-shadow:none; }
-    #view-extrato .view, .view{ display:none !important; }
-    #view-extrato{ display:block !important; }
+    .view{ display:none !important; }
+    #view-vendas{ display:block !important; }
+    #view-vendas > *{ display:none !important; }
+    #view-vendas > #extratoPrintArea{ display:block !important; }
     .table-wrap{ max-height:none; overflow:visible; border:none; }
     * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   }
