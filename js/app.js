@@ -3,7 +3,7 @@ const DEFAULT_STATE = {
   config: {
     mesRef: new Date().toISOString().slice(0,7),
     metaVendas: 12, comissaoCarro: 800, taxaVD: 0.5,
-    metaSeminovos: 3, metaConsorcios: 2, metaVD: 2, metaSeguidores: 3000, metaSalario: 10000,
+    metaSeminovos: 3, metaConsorcios: 2, metaVD: 2, metaRepasses: 2, metaSeguidores: 3000, metaSalario: 10000,
     metaLig: 30, metaWpp: 30, metaStories: 10, metaReels: 2, metaFeed: 8, metaOfertas: 4,
     diasAlerta: 7, vendedor: "", concessionaria: "Volkswagen",
     roteiroLigacaoMsg: "Olá, tudo bem?\n\nAqui é o {vendedor} da Motomecânica Volkswagen de Lajeado.\n\nEstou ligando porque estamos com ótimas ofertas de carros zero km esse mês.\n\nTeria interesse em conhecer uma proposta sem compromisso?",
@@ -27,7 +27,7 @@ let state = null;
 function normalizeVendas(vendas){
   return (vendas || []).map(v=>{
     if (v.tipoLabel===undefined){
-      v.tipoLabel = Number(v.taxa)===0.005 ? "0KM" : Number(v.taxa)===0.007 ? "Seminovo" : Number(v.taxa)===0.01 ? "Consórcio" : "VD";
+      v.tipoLabel = Number(v.taxa)===0.005 ? "0KM" : Number(v.taxa)===0.007 ? "Seminovo" : Number(v.taxa)===0.01 ? "Consórcio" : Number(v.taxa)===0.003 ? "Repasses" : "VD";
     }
     if (v.emplacamento===undefined){ v.emplacamento = false; v.emplacamentoValor = 0; }
     if (v.emplacamentoPago===undefined){ v.emplacamentoPago = false; }
@@ -643,6 +643,7 @@ document.getElementById("formControle").addEventListener("submit", e=>{
     avaliados:+document.getElementById("cAvaliados").value||0,
     seg:+document.getElementById("cSeg").value||0, painel:+document.getElementById("cPainel").value||0,
     insights:+document.getElementById("cInsights").value||0, posts:+document.getElementById("cPosts").value||0,
+    segLiquido:+document.getElementById("cSegLiquido").value||0, interacoes:+document.getElementById("cInteracoes").value||0,
     ts: Date.now(),
   };
   if (!state.dias[k]) state.dias[k] = [];
@@ -660,6 +661,7 @@ document.getElementById("formVenda").addEventListener("submit", e=>{
   let taxa, tipoLabel;
   if (tipoSel==="VD"){ taxa = (Number(state.config.taxaVD)||0)/100; tipoLabel = "VD"; }
   else if (tipoSel==="CONSORCIO"){ taxa = 0.01; tipoLabel = "Consórcio"; }
+  else if (tipoSel==="REPASSE"){ taxa = 0.003; tipoLabel = "Repasses"; }
   else { taxa = Number(tipoSel); tipoLabel = taxa===0.005 ? "0KM" : "Seminovo"; }
   const emplac = document.getElementById("vEmplac").value === "sim";
   const emplacValor = emplac ? 50 : 0;
@@ -913,6 +915,7 @@ document.getElementById("btnSalvarConfig").addEventListener("click", ()=>{
     metaSeminovos: +document.getElementById("cfgMetaSemi").value||0,
     metaConsorcios: +document.getElementById("cfgMetaConsorcio").value||0,
     metaVD: +document.getElementById("cfgMetaVD").value||0,
+    metaRepasses: +document.getElementById("cfgMetaRepasse").value||0,
     metaLig: +document.getElementById("cfgLig").value||0,
     metaWpp: +document.getElementById("cfgWpp").value||0,
     metaStories: +document.getElementById("cfgSto").value||0,

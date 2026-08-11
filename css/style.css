@@ -648,7 +648,8 @@
   .comissao-col:first-child{ padding-left:0; }
   .comissao-col:last-child{ padding-right:0; }
   .comissao-col:not(:last-child){ border-right:1px solid rgba(255,255,255,.28); }
-  .comissao-col .label{ font-size:9.5px; white-space:normal; line-height:1.2; margin-bottom:3px; min-height:0; }
+  .comissao-col .label{ font-size:9.5px; white-space:normal; line-height:1.2; margin-bottom:3px; min-height:0; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+  .comissao-col .label .icone-grande{ font-size:15px; vertical-align:middle; margin-right:0; flex-shrink:0; }
   .comissao-col-value{ font-size:15px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .comissao-toque-hint{ font-size:10.5px; opacity:.75; margin-top:6px; text-align:center; font-weight:600; }
   @media(max-width:640px){

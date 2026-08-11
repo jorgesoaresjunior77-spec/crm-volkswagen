@@ -635,9 +635,25 @@ function NUMFG(n){ return n.toLocaleString("pt-BR",{minimumFractionDigits:2,maxi
 function isoG(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 function moedaInputG(el, campo){
   el.addEventListener("input", e=>{
+    const cursorAntes = e.target.selectionStart;
+    // Conta dígitos a partir da DIREITA (não da esquerda): os centavos são sempre fixos em 2 casas
+    // e o zero à esquerda é só preenchimento de formatação, então contar da esquerda desalinha o
+    // cursor quando o número ainda é curto. Contar da direita funciona tanto pra digitar em
+    // sequência num campo vazio quanto pra editar um dígito no meio de um número grande.
+    const digitosDepoisDoCursor = e.target.value.slice(cursorAntes).replace(/[^\d]/g,"").length;
     const v = e.target.value.replace(/[^\d]/g,"");
     state.gerente.est[campo] = v ? parseInt(v,10)/100 : 0;
-    e.target.value = state.gerente.est[campo] ? NUMFG(state.gerente.est[campo]) : "";
+    const formatado = state.gerente.est[campo] ? NUMFG(state.gerente.est[campo]) : "";
+    e.target.value = formatado;
+    let novoCursor = formatado.length;
+    if (digitosDepoisDoCursor>0){
+      let contados = 0;
+      for (let i=formatado.length-1;i>=0;i--){
+        if (/\d/.test(formatado[i])) contados++;
+        if (contados===digitosDepoisDoCursor){ novoCursor = i; break; }
+      }
+    }
+    e.target.setSelectionRange(novoCursor, novoCursor);
     calcularGerente(); persist();
   });
 }

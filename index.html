@@ -160,6 +160,11 @@
           <div class="gauge-title">Vendas VD</div>
           <div class="gauge-label" id="progLabelVD">0%</div>
         </div>
+        <div class="gauge-box">
+          <div id="gaugeRepasse"></div>
+          <div class="gauge-title">Repasses</div>
+          <div class="gauge-label" id="progLabelRepasse">0%</div>
+        </div>
       </div>
     </div>
     <div class="panel financiamento-panel">
@@ -186,7 +191,7 @@
       <div id="corridaVendasBox"></div>
     </div>
     <div class="panel">
-      <h2>💰 Meta de Salário (Comissões) <span>vale apenas comissão de carros 0KM, Seminovos e Venda Direta (VD)</span></h2>
+      <h2>💰 Meta de Salário (Comissões) <span>vale apenas comissão de carros 0KM, Seminovos, Venda Direta (VD) e Repasses</span></h2>
       <div class="insta-meta-box">
         <div class="insta-meta-form">
           <label>🎯 Meta de Salário (R$)</label>
@@ -444,6 +449,8 @@
             <div><label>Painel Profissional</label><input type="number" min="0" id="cPainel" placeholder="0"></div>
             <div><label>Insights do Criador</label><input type="number" min="0" id="cInsights" placeholder="0"></div>
             <div><label>Posts</label><input type="number" min="0" id="cPosts" placeholder="0"></div>
+            <div><label>Seguidores Líquidos <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">(ganhos − perdidos no dia)</span></label><input type="number" id="cSegLiquido" placeholder="0"></div>
+            <div><label>Interações</label><input type="number" min="0" id="cInteracoes" placeholder="0"></div>
           </div>
         </div>
 
@@ -546,6 +553,7 @@
             <option value="0.007">Seminovo (0,7%)</option>
             <option value="VD">Venda Direta - VD</option>
             <option value="CONSORCIO">Consórcio (1%)</option>
+            <option value="REPASSE">Repasses (0,3%)</option>
           </select>
         </div>
         <div><label>Data da venda</label><input type="date" id="vData" required></div>
@@ -713,7 +721,7 @@
           <button type="button" class="ghost" id="btnAddTaxa">+ Adicionar opção de financiamento</button>
         </div>
 
-        <div style="display:flex;gap:8px;align-items:flex-end;">
+        <div style="grid-column:1/-1;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
           <button class="primary" type="submit" id="pBtnSubmit">Salvar proposta</button>
           <button class="ghost" type="button" id="pBtnCancelarEdicao" style="display:none;">Cancelar edição</button>
         </div>
@@ -1214,13 +1222,14 @@
     </div>
     <div class="panel">
       <h2>Configurações gerais</h2>
-      <p style="font-size:12.5px;color:var(--grey-dark);margin-top:-6px;">A comissão é calculada automaticamente em cada venda (aba 💵 Vendas): 0,5% para carro 0KM, 0,7% para seminovo, 1% para consórcio, e a taxa configurada abaixo para Venda Direta (VD). Se marcar emplacamento "Sim", soma R$ 50,00 ao total.</p>
+      <p style="font-size:12.5px;color:var(--grey-dark);margin-top:-6px;">A comissão é calculada automaticamente em cada venda (aba 💵 Vendas): 0,5% para carro 0KM, 0,7% para seminovo, 1% para consórcio, 0,3% para repasses, e a taxa configurada abaixo para Venda Direta (VD). Se marcar emplacamento "Sim", soma R$ 50,00 ao total.</p>
       <div class="metagrid">
         <div><label>Mês de referência</label><input type="month" id="cfgMes"></div>
         <div><label>Meta de vendas - Zero KM</label><input type="number" min="0" id="cfgMeta"></div>
         <div><label>Meta de vendas - Seminovos</label><input type="number" min="0" id="cfgMetaSemi"></div>
         <div><label>Meta de vendas - Consórcios</label><input type="number" min="0" id="cfgMetaConsorcio"></div>
         <div><label>Meta de vendas - VD</label><input type="number" min="0" id="cfgMetaVD"></div>
+        <div><label>Meta de vendas - Repasses</label><input type="number" min="0" id="cfgMetaRepasse"></div>
         <div><label>🎯 Meta Volks do Mês (carros) <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">— quantos carros a VW pediu de meta pra concessionária esse mês</span></label><input type="number" min="0" id="cfgMetaVolksCarros"></div>
         <div><label>👥 Vendedores Aptos <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">— quantos vendedores vão dividir essa meta</span></label><input type="number" min="1" id="cfgMetaVolksVendedores"></div>
         <div><label>Meta diária - Ligações</label><input type="number" min="0" id="cfgLig"></div>

@@ -17,10 +17,10 @@ function assinarMudancasRemotas(){
     .subscribe();
 }
 
-const CAMPOS_DIA = ["ligInvalido","ligNao","ligAtendCom","ligAtendSem","wpp","sto","ree","feed","ofe","nov","ret","vis","td","prop","ven","avaliados"];
+const CAMPOS_DIA = ["ligInvalido","ligNao","ligAtendCom","ligAtendSem","wpp","sto","ree","feed","ofe","nov","ret","vis","td","prop","ven","avaliados","segLiquido","interacoes"];
 function diaSum(k){
   const lista = state.dias[k] || [];
-  const acc = {ligInvalido:0,ligNao:0,ligAtendCom:0,ligAtendSem:0,wpp:0,sto:0,ree:0,feed:0,ofe:0,nov:0,ret:0,vis:0,td:0,prop:0,ven:0,avaliados:0};
+  const acc = {ligInvalido:0,ligNao:0,ligAtendCom:0,ligAtendSem:0,wpp:0,sto:0,ree:0,feed:0,ofe:0,nov:0,ret:0,vis:0,td:0,prop:0,ven:0,avaliados:0,segLiquido:0,interacoes:0};
   lista.forEach(e=>{ CAMPOS_DIA.forEach(f=>{ acc[f]+= Number(e[f])||0; }); });
   if (!isDiaComLigacao(k)){
     // ligações só contam de segunda a sexta (e em dia útil) — sábado e feriados não entram na conta
@@ -201,11 +201,15 @@ function renderInstagram(){
     const snap = diaInstaSnapshot(dias[i]);
     if (snap.seg||snap.painel||snap.insights||snap.posts) atual = {...atual, ...Object.fromEntries(Object.entries(snap).filter(([,v])=>v))};
   }
+  const segLiquidoMes = totalMes("segLiquido");
+  const interacoesMes = totalMes("interacoes");
   const cards = [
     ["Seguidores", fmtInstaUnidade(atual.seg, "Mil"), "linear-gradient(135deg,#833AB4,#C13584)"],
     ["Painel Profissional", fmtInstaUnidade(atual.painel, "Mil"), "linear-gradient(135deg,#C13584,#E1306C)"],
     ["Insights do Criador", fmtInstaUnidade(atual.insights, "Mil"), "linear-gradient(135deg,#FD1D1D,#F56040)"],
     ["Posts", fmtInstaUnidade(atual.posts, "Unidades"), "linear-gradient(135deg,#F77737,#FCAF45)"],
+    ["Seguidores Líquidos (mês)", (segLiquidoMes>=0?"+":"")+segLiquidoMes.toLocaleString("pt-BR"), "linear-gradient(135deg,#405DE6,#5B51D8)"],
+    ["Interações (mês)", fmtInstaUnidade(interacoesMes, "Mil"), "linear-gradient(135deg,#E1306C,#F77737)"],
   ];
   document.getElementById("instaKpis").innerHTML = cards.map(([l,v,g],i)=>
     `<div class="insta-kpi" style="background:${g};animation-delay:${(i*0.08).toFixed(2)}s;">
@@ -270,12 +274,24 @@ function renderInstagram(){
   document.getElementById("instaMetaLabel").textContent = cfg.metaSeguidores>0
     ? `${seguidoresAtuais.toLocaleString("pt-BR")} / ${cfg.metaSeguidores.toLocaleString("pt-BR")} (${(pctMeta*100).toFixed(0)}%)`
     : "Defina uma meta ao lado";
+  /* Estimativa de dias até a meta, com base no crescimento líquido médio (Seguidores Líquidos) */
+  const entradasComSegLiquido = Object.values(state.dias).flat().filter(e=>e && e.segLiquido);
+  const mediaLiquidaDiaria = entradasComSegLiquido.length>=2
+    ? entradasComSegLiquido.reduce((s,e)=>s+Number(e.segLiquido||0),0)/entradasComSegLiquido.length
+    : null;
+  const diasParaMetaLiquido = (mediaLiquidaDiaria!=null && mediaLiquidaDiaria>0) ? Math.ceil(faltaMeta/mediaLiquidaDiaria) : null;
+  const estimativaTxt = (cfg.metaSeguidores>0 && faltaMeta>0)
+    ? (diasParaMetaLiquido!=null
+        ? `Estimativa: aproximadamente ${diasParaMetaLiquido} dia(s) para atingir ${cfg.metaSeguidores.toLocaleString("pt-BR")} seguidores.`
+        : "Estimativa indisponível: registre mais dados de seguidores.")
+    : "";
+
   const metaMsg = document.getElementById("instaMetaMsg");
   if (cfg.metaSeguidores>0 && seguidoresAtuais>=cfg.metaSeguidores){
-    metaMsg.textContent = `🎉 Meta atingida! Que tal subir a meta para ${(cfg.metaSeguidores+2000).toLocaleString("pt-BR")}?`;
+    metaMsg.innerHTML = `🎉 Meta atingida! Que tal subir a meta para ${(cfg.metaSeguidores+2000).toLocaleString("pt-BR")}?`;
     metaMsg.style.color = "var(--green)";
   } else if (cfg.metaSeguidores>0){
-    metaMsg.textContent = `Faltam ${faltaMeta.toLocaleString("pt-BR")} seguidores${diasParaMeta?` · no ritmo atual, cerca de ${diasParaMeta} dia(s)`:""}`;
+    metaMsg.innerHTML = `Faltam ${faltaMeta.toLocaleString("pt-BR")} seguidores${diasParaMeta?` · no ritmo atual, cerca de ${diasParaMeta} dia(s)`:""}<br><span style="opacity:.85;">${estimativaTxt}</span>`;
     metaMsg.style.color = "var(--text-dim)";
   } else {
     metaMsg.textContent = "";
@@ -921,8 +937,9 @@ function renderCharts(){
   const nSemi = vMes.filter(v=>v.tipoLabel==="Seminovo").length;
   const nVD = vMes.filter(v=>v.tipoLabel==="VD").length;
   const nConsorcio = vMes.filter(v=>v.tipoLabel==="Consórcio").length;
+  const nRepasse = vMes.filter(v=>v.tipoLabel==="Repasses").length;
   document.getElementById("chartTipo").innerHTML = donutChartSVG(
-    ["Carro 0KM","Seminovo","Venda Direta (VD)","Consórcio"], [n0km,nSemi,nVD,nConsorcio], ["#E10600","#48474F","#FFCE00","#833AB4"]
+    ["Carro 0KM","Seminovo","Venda Direta (VD)","Consórcio","Repasses"], [n0km,nSemi,nVD,nConsorcio,nRepasse], ["#E10600","#48474F","#FFCE00","#833AB4","#1C8FC9"]
   );
 
   renderMetasProgress();
@@ -1162,8 +1179,10 @@ function renderDashboard(){
   const valorVD = vMes.filter(v=>v.tipoLabel==="VD").reduce((s,v)=>s+(Number(v.valor)||0),0);
   const vendidosConsorcio = vMes.filter(v=>v.tipoLabel==="Consórcio").length;
   const valorConsorcio = vMes.filter(v=>v.tipoLabel==="Consórcio").reduce((s,v)=>s+(Number(v.valor)||0),0);
-  const valoresNegocios = valor0km + valorSemi + valorConsorcio + valorVD; // valor dos produtos/negócios (emplacamento NÃO entra aqui)
-  const qtdNegocios = vendidos0km + vendidosSemi + vendidosConsorcio + vendidosVD; // usado no card de comissão (inclui consórcio)
+  const vendidosRepasse = vMes.filter(v=>v.tipoLabel==="Repasses").length;
+  const valorRepasse = vMes.filter(v=>v.tipoLabel==="Repasses").reduce((s,v)=>s+(Number(v.valor)||0),0);
+  const valoresNegocios = valor0km + valorSemi + valorConsorcio + valorVD + valorRepasse; // valor dos produtos/negócios (emplacamento NÃO entra aqui)
+  const qtdNegocios = vendidos0km + vendidosSemi + vendidosConsorcio + vendidosVD + vendidosRepasse; // usado no card de comissão (inclui consórcio e repasses)
   const acessoriosTotal = vMes.reduce((s,v)=>s+(Number(v.acessoriosValor)||0),0);
   const seguroTotal = vMes.reduce((s,v)=>s+(Number(v.seguroValor)||0),0);
   const comissaoFinal = comissaoTotal + emplacamentoTotal + retornoBancoTotal + acessoriosTotal + seguroTotal;
@@ -1247,6 +1266,7 @@ function renderDashboard(){
     ["🚘 Carros Seminovos", `${vendidosSemi} · ${moneyFmt(valorSemi)}`],
     ["🤝 Venda Direta (VD)", `${vendidosVD} · ${moneyFmt(valorVD)}`],
     ["🪙 Consórcios do Mês", `${vendidosConsorcio} · ${moneyFmt(valorConsorcio)}`],
+    ["🔁 Repasses do Mês", `${vendidosRepasse} · ${moneyFmt(valorRepasse)}`],
     ["🏦 Retorno do Banco VW", `${moneyFmt(retornoBancoTotal)}`],
   ];
   const emplacVendasMes = vMes.filter(v=>v.emplacamento);
@@ -1333,18 +1353,22 @@ function renderDashboard(){
   document.getElementById("gaugeVD").innerHTML = gaugeSVG(pctVD, "vd");
   document.getElementById("progLabelVD").textContent = `${faceParaPct(pctVD)} ${vendidosVD} de ${cfg.metaVD||0} (${(pctVD*100).toFixed(0)}%)`;
 
+  const pctRepasse = cfg.metaRepasses>0 ? Math.min(vendidosRepasse/cfg.metaRepasses,1) : 0;
+  document.getElementById("gaugeRepasse").innerHTML = gaugeSVG(pctRepasse, "repasse");
+  document.getElementById("progLabelRepasse").textContent = `${faceParaPct(pctRepasse)} ${vendidosRepasse} de ${cfg.metaRepasses||0} (${(pctRepasse*100).toFixed(0)}%)`;
+
   animarAgulhas(document.querySelector(".gauges-row"));
 
   const dias = diasDoMesAtual();
 
-  /* ===================== META DE SALÁRIO (SOMENTE 0KM + SEMINOVO + VD) ===================== */
+  /* ===================== META DE SALÁRIO (SOMENTE 0KM + SEMINOVO + VD + REPASSES) ===================== */
   {
-    const vElegiveis = vMes.filter(v=> v.tipoLabel==="0KM" || v.tipoLabel==="Seminovo" || v.tipoLabel==="VD");
+    const vElegiveis = vMes.filter(v=> v.tipoLabel==="0KM" || v.tipoLabel==="Seminovo" || v.tipoLabel==="VD" || v.tipoLabel==="Repasses");
     const comissaoGanha = vElegiveis.reduce((s,v)=>s+(Number(v.comissao)||0)+(Number(v.retornoBanco)||0),0);
     const valorVendido = vElegiveis.reduce((s,v)=>s+(Number(v.valor)||0),0);
     const metaSalario = cfg.metaSalario || 0;
     const faltaComissao = Math.max(metaSalario-comissaoGanha, 0);
-    const taxaMediaPadrao = ((0.5+0.7+(Number(cfg.taxaVD)||0))/3)/100;
+    const taxaMediaPadrao = ((0.5+0.7+(Number(cfg.taxaVD)||0)+0.3)/4)/100;
     const taxaMedia = valorVendido>0 ? (comissaoGanha/valorVendido) : taxaMediaPadrao;
     const valorNecessario = taxaMedia>0 ? faltaComissao/taxaMedia : 0;
     const pctMetaSalario = metaSalario>0 ? Math.min(comissaoGanha/metaSalario,1) : 0;
@@ -1357,11 +1381,11 @@ function renderDashboard(){
     animarAgulhas(document.getElementById("gaugeSalario").parentElement);
 
     document.getElementById("statsSalarioCards").innerHTML = [
-      ["💰 Comissão Ganha (0KM+Semi+VD+Retorno Banco)", moneyFmt(comissaoGanha)],
+      ["💰 Comissão Ganha (0KM+Semi+VD+Repasses+Retorno Banco)", moneyFmt(comissaoGanha)],
       ["📉 Falta para a Meta", moneyFmt(faltaComissao)],
       ["🚗 Valor em Vendas Necessário", moneyFmt(valorNecessario)],
       ["📅 Ritmo Diário Necessário", moneyFmt(ritmoDiario)+"/dia"],
-      ["📐 Taxa Média Efetiva Usada", `${(taxaMedia*100).toFixed(2)}%${valorVendido>0?" (real deste mês)":" (estimativa: 0KM 0,5% · Semi 0,7% · VD "+((Number(cfg.taxaVD)||0)).toFixed(2)+"%)"}`],
+      ["📐 Taxa Média Efetiva Usada", `${(taxaMedia*100).toFixed(2)}%${valorVendido>0?" (real deste mês)":" (estimativa: 0KM 0,5% · Semi 0,7% · VD "+((Number(cfg.taxaVD)||0)).toFixed(2)+"% · Repasses 0,3%)"}`],
     ].map(([l,v])=>`<div class="card"><div class="label">${l}</div><div class="value" style="font-size:18px;">${v}</div></div>`).join("");
 
     // Impacto das atividades nos dias com venda elegível
@@ -1635,6 +1659,7 @@ function tipoDisplay(v){
   if (v.tipoLabel==="0KM") return "0KM (0,5%)";
   if (v.tipoLabel==="Seminovo") return "Seminovo (0,7%)";
   if (v.tipoLabel==="Consórcio") return "Consórcio (1%)";
+  if (v.tipoLabel==="Repasses") return "Repasses (0,3%)";
   return `VD (${(Number(v.taxa)*100).toFixed(2)}%)`;
 }
 function fecharRelatorio(){
@@ -1680,7 +1705,7 @@ function editarVenda(id){
   if (!v) return;
   document.querySelector('nav button[data-view="vendas"]').click();
   document.getElementById("vEditId").value = v.id;
-  document.getElementById("vTipo").value = v.tipoLabel==="VD" ? "VD" : v.tipoLabel==="Consórcio" ? "CONSORCIO" : String(v.taxa);
+  document.getElementById("vTipo").value = v.tipoLabel==="VD" ? "VD" : v.tipoLabel==="Consórcio" ? "CONSORCIO" : v.tipoLabel==="Repasses" ? "REPASSE" : String(v.taxa);
   document.getElementById("vData").value = v.data;
   document.getElementById("vCarro").value = v.carro||"";
   document.getElementById("vModelo").value = v.modelo||"";
@@ -1914,6 +1939,7 @@ function renderConfig(){
   document.getElementById("cfgMetaSemi").value = c.metaSeminovos;
   document.getElementById("cfgMetaConsorcio").value = c.metaConsorcios;
   document.getElementById("cfgMetaVD").value = c.metaVD;
+  document.getElementById("cfgMetaRepasse").value = c.metaRepasses;
   {
     state.metasVolks = state.metasVolks || {};
     const mv = state.metasVolks[c.mesRef] || {};
@@ -2695,10 +2721,18 @@ function calcularGerente(){
   if (ops.length>1){
     box.hidden = false;
     if (!est.op) est.op = ops[0];
-    document.getElementById("g-opcoes").innerHTML = ops.map(o=>{
-      const r = achadas.find(x=>x.op===o);
+    const linhasPorOp = ops.map(o=>achadas.find(x=>x.op===o));
+    // Se todas as opções citam o MESMO texto de taxas combinado (só o trade-in muda entre elas),
+    // separa cada taxa 1:1 por posição em vez de repetir a lista inteira em cada opção —
+    // senão cada taxa parece vinculada a todos os trade-ins ao mesmo tempo.
+    const mesmoTextoEmTodas = linhasPorOp.every(r=>r.tx===linhasPorOp[0].tx);
+    const chipsBase = mesmoTextoEmTodas ? parseTaxasElegiveis(linhasPorOp[0].tx) : null;
+    const podeSepararPorPosicao = !!(chipsBase && chipsBase.length===ops.length);
+    document.getElementById("g-opcoes").innerHTML = ops.map((o,idx)=>{
+      const r = linhasPorOp[idx];
+      const textoTaxa = podeSepararPorPosicao ? chipsBase[idx].label : r.tx;
       return `<div class="g-opt ${est.op===o?'sel':''}" data-op="${o}">
-        <span class="t">${r.tx}</span><span class="v">trade-in ${BRL0G(r.ti)}</span></div>`;
+        <span class="t">${textoTaxa}</span><span class="v">trade-in ${BRL0G(r.ti)}</span></div>`;
     }).join("");
     document.querySelectorAll("#g-opcoes .g-opt").forEach(el=>{
       el.addEventListener("click", ()=>{ est.op = +el.dataset.op; calcularGerente(); persist(); });
@@ -3003,8 +3037,8 @@ function renderTabelaNotaBancoVW(){
 }
 function popularOrigemVendaBancoVW(){
   const sel = document.getElementById("bv-venda-origem");
-  const vMes = [...vendasDoMesAtual()].sort((a,b)=>(b.data||"").localeCompare(a.data||""));
-  sel.innerHTML = '<option value="">— Preencher manualmente —</option>' + vMes.map(v=>
+  const todasVendas = [...(state.vendas||[])].sort((a,b)=>(b.data||"").localeCompare(a.data||""));
+  sel.innerHTML = '<option value="">— Preencher manualmente —</option>' + todasVendas.map(v=>
     `<option value="${v.id}">${fmtDate(v.data)} · ${v.cliente||"—"} · ${v.carro||""} ${v.modelo||""}${v.pontuacao?" · "+Number(v.pontuacao).toFixed(2)+" pts":""}</option>`
   ).join("");
 }
