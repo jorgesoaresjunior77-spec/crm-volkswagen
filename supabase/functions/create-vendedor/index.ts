@@ -66,10 +66,14 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const nome = typeof body.nome === "string" ? body.nome.trim() : "";
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    const senha = typeof body.senha === "string" ? body.senha : "";
+    const telefone = typeof body.telefone === "string" ? body.telefone.trim() : "";
+    // Senha inicial é sempre fixa — o vendedor é obrigado a trocá-la no
+    // primeiro acesso (deve_trocar_senha=true abaixo). O cliente nunca define
+    // a senha de outro usuário.
+    const senha = "000000";
 
-    if (!email || !senha || senha.length < 6) {
-      return jsonResponse({ error: "Preencha email e uma senha com pelo menos 6 caracteres." }, 400);
+    if (!email) {
+      return jsonResponse({ error: "Preencha o email do vendedor." }, 400);
     }
 
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
@@ -88,7 +92,7 @@ Deno.serve(async (req) => {
     const { error: upsertErr } = await admin
       .from("profiles")
       .upsert(
-        { id: created.user.id, email, nome, ativo: true },
+        { id: created.user.id, email, nome, telefone, ativo: true, deve_trocar_senha: true },
         { onConflict: "id" },
       );
     if (upsertErr) {

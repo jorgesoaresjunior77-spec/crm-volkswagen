@@ -18,12 +18,13 @@ function renderClientes(){
   const cfg = state.config;
   const tbody = document.querySelector("#clientesTable tbody");
   const chk = document.getElementById("chkVerTodosClientes");
-  if (chk) chk.checked = verTodosClientesVendedor;
-  // Filtra por vendedor logado, a menos que "ver todos" esteja marcado.
-  // Clientes sem "criadoPor" (cadastrados antes desse recurso) aparecem para todos.
-  const clientesVisiveis = (currentVendedorEmail && !verTodosClientesVendedor)
-    ? state.clientes.filter(c => !c.criadoPor || c.criadoPor === currentVendedorEmail)
-    : state.clientes;
+  if (chk) chk.checked = verTodosVendedor;
+  // Filtra por vendedor logado (UUID), a menos que o admin esteja com "ver
+  // todos" ligado. Clientes antigos sem vendedorId (migração ainda não rodou)
+  // continuam visíveis pra todo mundo até serem migrados.
+  const clientesVisiveis = filtrarPorVendedor(state.clientes.filter(c=>c.vendedorId)).concat(
+    state.clientes.filter(c=>!c.vendedorId)
+  );
   if (clientesVisiveis.length===0){
     tbody.innerHTML = `<tr><td colspan="11" class="empty">Nenhum cliente cadastrado ainda.</td></tr>`;
     return;
@@ -110,6 +111,7 @@ function togglePendenciaPago(catKey, vendaId){
         valor: Number(v[cat.valorCampo])||0,
         origemVendaId: marcador,
         obs: `${v.cliente||""} — ${v.carro||""} ${v.modelo||""}`.trim(),
+        vendedorId: v.vendedorId || null, // herda da venda de origem, não de quem clicou
       });
     }
   } else {

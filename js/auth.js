@@ -12,6 +12,14 @@ function esconderLoginOverlay(){
   if (ov) ov.style.display = "none";
   if (app) app.style.display = "block";
 }
+function mostrarTrocarSenhaOverlay(){
+  const ov = document.getElementById("trocarSenhaOverlay");
+  if (ov) ov.style.display = "flex";
+}
+function esconderTrocarSenhaOverlay(){
+  const ov = document.getElementById("trocarSenhaOverlay");
+  if (ov) ov.style.display = "none";
+}
 async function verificarSessaoLogin(){
   if (!supabaseClient){ mostrarLoginOverlay(); return; }
   const { data } = await supabaseClient.auth.getSession();

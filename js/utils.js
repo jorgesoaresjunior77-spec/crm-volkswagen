@@ -519,7 +519,18 @@ function competicaoCarrosSVG(itens){
 }
 function salarioMesChartSVG(labels, values){
   if (values.every(v=>v===0) || values.length===0) return `<div class="empty">Sem dados suficientes ainda.</div>`;
-  const w=600, h=280, padL=44, padR=16, padT=34, padB=42;
+  // Largura escala com a quantidade de meses (mesmo padrão de competicaoCarrosSVG)
+  // e usa largura literal (não 100%) — assim as barras/textos nunca ficam
+  // menores que o legível; com muitos meses o contêiner rola horizontalmente
+  // em vez de espremer tudo.
+  // A largura de cada coluna também escala com o comprimento do MAIOR valor
+  // formatado (ex.: "12.480,00" é bem mais largo que "480,00") — sem isso, com
+  // valores altos e vários meses lado a lado, o texto de uma barra invadia o
+  // texto da barra vizinha.
+  const valoresTxt = values.map(v=>moneyFmt(v).replace("R$","").trim());
+  const maiorTxtLen = Math.max(...valoresTxt.map(t=>t.length));
+  const colW = Math.max(70, maiorTxtLen*7.4 + 16);
+  const w=Math.max(600, values.length*colW), h=280, padL=44, padR=16, padT=34, padB=42;
   const max = Math.max(1, ...values);
   const bw = (w-padL-padR)/values.length - 10;
   const idxMax = values.indexOf(Math.max(...values));
@@ -538,11 +549,11 @@ function salarioMesChartSVG(labels, values){
     return `<g class="viz-glow">
       <rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="6" fill="${cor}" ${destaque?'stroke="#F7C600" stroke-width="2.5"':''}/>
       ${destaque?`<text x="${x+bw/2}" y="${y-20}" font-size="13" text-anchor="middle">🏆</text>`:""}
-      <text x="${x+bw/2}" y="${y-6}" font-size="10.5" text-anchor="middle" fill="${destaque?'#B8790F':'#48474F'}" font-weight="800">${moneyFmt(v).replace("R$","").trim()}</text>
+      <text x="${x+bw/2}" y="${y-6}" font-size="10.5" text-anchor="middle" fill="${destaque?'#B8790F':'#48474F'}" font-weight="800">${valoresTxt[i]}</text>
       <text x="${x+bw/2}" y="${h-padB+16}" font-size="9.5" text-anchor="middle" fill="#8a8f98" font-weight="700">${labels[i]}</text>
     </g>`;
   }).join("");
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">${grid}${bars}</svg>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${grid}${bars}</svg>`;
 }
 function salarioTipoChartSVG(tipos, valores, cores){
   const total = valores.reduce((a,b)=>a+b,0);
@@ -654,7 +665,7 @@ function moedaInputG(el, campo){
       }
     }
     e.target.setSelectionRange(novoCursor, novoCursor);
-    calcularGerente(); persist();
+    calcularGerente(); persistDebounced();
   });
 }
 

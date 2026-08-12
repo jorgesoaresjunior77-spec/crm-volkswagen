@@ -9,18 +9,39 @@ const DEFAULT_STATE = {
     roteiroLigacaoMsg: "Olá, tudo bem?\n\nAqui é o {vendedor} da Motomecânica Volkswagen de Lajeado.\n\nEstou ligando porque estamos com ótimas ofertas de carros zero km esse mês.\n\nTeria interesse em conhecer uma proposta sem compromisso?",
     roteiroWhatsMsg: "Olá! Aqui é o {vendedor}, da Motomecânica Volkswagen de Lajeado 🚗\n\nVi que você tem interesse em conhecer nossos carros 0KM. Esse mês estamos com condições especiais — posso te enviar uma proposta sem compromisso?"
   },
-  dias: {},      // { "2026-07-01": {lig,wpp,sto,ree,nov,ret,vis,td,prop,ven} }
-  clientes: [],  // { id, nome, tel, cidade, veiculo, valor, origem, ultimoContato, obs }
-  propostas: [], // { id, data, cliente, whats, origem, carro, versao, cor, valorCota, valorCarro, descontoNF, bonusVarejo, bonusTroca, taxaMensal, entradaPct, parcelas, ipva, emplacamento, ipvaEmplacTotal }
-  vendas: [],    // { id, data, carro, modelo, versao, cliente, valor, taxa, tipoLabel, comissao, emplacamento, emplacamentoValor, total }
+  dias: {},      // { [vendedorId]: { "2026-07-01": [{lig,wpp,sto,ree,nov,ret,vis,td,prop,ven,...}] } }
+  clientes: [],  // { id, nome, tel, cidade, veiculo, valor, origem, ultimoContato, obs, vendedorId }
+  propostas: [], // { id, data, cliente, whats, origem, carro, versao, cor, valorCota, valorCarro, descontoNF, bonusVarejo, bonusTroca, taxaMensal, entradaPct, parcelas, ipva, emplacamento, ipvaEmplacTotal, vendedorId }
+  vendas: [],    // { id, data, carro, modelo, versao, cliente, valor, taxa, tipoLabel, comissao, emplacamento, emplacamentoValor, total, vendedorId }
   agenda: [],    // { id, cliente, tipo, data, hora, obs, feito }
-  salarios: [],  // { id, data (YYYY-MM-DD), tipo ("Banco"|"Cartão"|"Prêmios"), valor }
-  ponto: {},     // { "2026-07-05": {entrada, saida, foraCidade, transporte, carroTipo, obs} }
-  humor: {},     // { "2026-07-05": [ {valor: 1|2|3, ts: timestamp}, ... ] }
+  salarios: [],  // { id, data (YYYY-MM-DD), tipo ("Banco"|"Cartão"|"Prêmios"), valor, vendedorId }
+  ponto: {},     // { [vendedorId]: { "2026-07-05": {entrada, saida, foraCidade, transporte, carroTipo, obs} } }
+  humor: {},     // { [vendedorId]: { "2026-07-05": [ {valor: 1|2|3, ts: timestamp}, ... ] } }
   feriadosCustom: [], // { data: "2026-01-26", nome: "Aniversário de Lajeado" }
   aniversarios: [], // { id, data: "MM-DD", nome, whats, obs }
-  postagens: []
+  postagens: [],
+  metasPorVendedor: {}, // { [vendedorId]: {metaVendas, comissaoCarro, taxaVD, metaSeminovos, metaConsorcios, metaVD, metaRepasses, metaSeguidores, metaSalario, metaLig, metaWpp, metaStories, metaReels, metaFeed, metaOfertas, diasAlerta} }
 };
+
+// Campos de meta que passam a ser por vendedor (cada um define a própria) —
+// os defaults abaixo são os mesmos valores que já existiam em DEFAULT_STATE.config,
+// usados como ponto de partida quando um vendedor ainda não configurou a própria meta.
+const DEFAULT_METAS_VENDEDOR = {
+  metaVendas: 12, comissaoCarro: 800, taxaVD: 0.5,
+  metaSeminovos: 3, metaConsorcios: 2, metaVD: 2, metaRepasses: 2, metaSeguidores: 3000, metaSalario: 10000,
+  metaLig: 30, metaWpp: 30, metaStories: 10, metaReels: 2, metaFeed: 8, metaOfertas: 4,
+  diasAlerta: 7,
+};
+
+// Metas do vendedor logado — cria o registro sob demanda (com os defaults
+// acima) se ele ainda não tiver configurado a própria meta.
+function metasDoVendedorAtual(){
+  state.metasPorVendedor = state.metasPorVendedor || {};
+  const id = currentVendedorPerfil && currentVendedorPerfil.id;
+  if (!id) return {...DEFAULT_METAS_VENDEDOR};
+  if (!state.metasPorVendedor[id]) state.metasPorVendedor[id] = {...DEFAULT_METAS_VENDEDOR};
+  return state.metasPorVendedor[id];
+}
 
 let state = null;
 
@@ -42,13 +63,73 @@ function normalizeVendas(vendas){
   });
 }
 
-function normalizeDias(dias){
+function ehChaveDeData(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k); }
+
+function normalizeDiasPlano(dias){
   const out = {};
   Object.keys(dias||{}).forEach(k=>{
     const v = dias[k];
     out[k] = Array.isArray(v) ? v : [v];
   });
   return out;
+}
+// state.dias pode estar em duas formas: plano (antes da migração pra
+// isolamento por vendedor: { "2026-07-01": [...] }) ou aninhado por vendedor
+// (depois da migração: { [vendedorId]: { "2026-07-01": [...] } }). Detecta
+// pela forma da primeira chave (data vs UUID) pra normalizar do jeito certo
+// sem corromper a estrutura.
+function normalizeDias(dias){
+  const chaves = Object.keys(dias||{});
+  const aninhadoPorVendedor = chaves.length>0 && !ehChaveDeData(chaves[0]);
+  if (aninhadoPorVendedor){
+    const out = {};
+    chaves.forEach(vid=>{ out[vid] = normalizeDiasPlano(dias[vid]||{}); });
+    return out;
+  }
+  return normalizeDiasPlano(dias||{});
+}
+
+// Painel diário (ligações/WhatsApp/stories/... + Instagram) é por vendedor,
+// particular. Escrita sempre vai na "gaveta" do vendedor logado; leitura em
+// modo "ver todos" (admin) mostra o combinado de todo mundo.
+function diasDoVendedor(vendedorId){
+  state.dias = state.dias || {};
+  if (!state.dias[vendedorId]) state.dias[vendedorId] = {};
+  return state.dias[vendedorId];
+}
+function diasDoVendedorAtual(){
+  if (currentVendedorPerfil && currentVendedorPerfil.isAdmin && verTodosVendedor){
+    const combinado = {};
+    Object.keys(state.dias||{}).forEach(vid=>{
+      Object.keys(state.dias[vid]||{}).forEach(data=>{
+        combinado[data] = (combinado[data]||[]).concat(state.dias[vid][data]||[]);
+      });
+    });
+    return combinado;
+  }
+  const id = currentVendedorPerfil && currentVendedorPerfil.id;
+  return id ? diasDoVendedor(id) : {};
+}
+// Ponto (timeclock) e humor são registros pessoais — sempre só do próprio
+// vendedor logado, mesmo em modo "ver todos" (não há seletor de vendedor
+// nessas telas hoje, então não há como escolher de quem ver).
+function pontoDoVendedor(vendedorId){
+  state.ponto = state.ponto || {};
+  if (!state.ponto[vendedorId]) state.ponto[vendedorId] = {};
+  return state.ponto[vendedorId];
+}
+function pontoDoVendedorAtual(){
+  const id = currentVendedorPerfil && currentVendedorPerfil.id;
+  return id ? pontoDoVendedor(id) : {};
+}
+function humorDoVendedor(vendedorId){
+  state.humor = state.humor || {};
+  if (!state.humor[vendedorId]) state.humor[vendedorId] = {};
+  return state.humor[vendedorId];
+}
+function humorDoVendedorAtual(){
+  const id = currentVendedorPerfil && currentVendedorPerfil.id;
+  return id ? humorDoVendedor(id) : {};
 }
 
 function aplicarAjustesDeCompatibilidade(){
@@ -66,6 +147,7 @@ function aplicarAjustesDeCompatibilidade(){
   state.postagens = state.postagens || [];
   state.metasVolks = state.metasVolks || {};
   state.vendedores = state.vendedores || [];
+  state.metasPorVendedor = state.metasPorVendedor || {};
   inicializarEstadoGerente();
   inicializarEstadoBancoVW();
   inicializarEstadoDocumentos();
@@ -83,6 +165,21 @@ function persist(){
   document.getElementById("saveStatus").textContent = "🟡 Salvando no banco…";
   document.getElementById("saveStatus").className = "pending";
   syncEstadoNuvem();
+}
+
+// Versão com debounce, para uso em handlers de "input" que disparam a cada
+// tecla digitada (ex.: campos de moeda). Sem isso, cada tecla vira um upsert
+// no Supabase; ao digitar rápido, o eco em tempo real de um envio anterior
+// pode chegar no meio da digitação seguinte e disparar um renderAll() que
+// reescreve o próprio campo (valor "tremendo"/cursor pulando/valor perdido).
+// Só reenvia 500ms depois da última tecla — o "state" em si já foi atualizado
+// na hora pelo handler, então não há perda de dado, só atraso no envio.
+let _persistDebounceTimer = null;
+function persistDebounced(delay){
+  document.getElementById("saveStatus").textContent = "🟡 Digitando…";
+  document.getElementById("saveStatus").className = "pending";
+  clearTimeout(_persistDebounceTimer);
+  _persistDebounceTimer = setTimeout(()=>{ syncEstadoNuvem(); }, delay || 500);
 }
 
 document.getElementById("btnFazerLogin").addEventListener("click", async ()=>{
@@ -113,17 +210,42 @@ document.getElementById("btnFazerLogin").addEventListener("click", async ()=>{
 document.getElementById("loginSenha").addEventListener("keydown", e=>{
   if (e.key==="Enter") document.getElementById("btnFazerLogin").click();
 });
+document.getElementById("btnConfirmarNovaSenha").addEventListener("click", async ()=>{
+  const s1 = document.getElementById("novaSenhaInput").value;
+  const s2 = document.getElementById("novaSenhaConfirmInput").value;
+  const erroEl = document.getElementById("trocarSenhaErro");
+  erroEl.textContent = "";
+  if (!s1 || s1.length<6){ erroEl.textContent = "A senha precisa ter pelo menos 6 caracteres."; return; }
+  if (s1 === "000000"){ erroEl.textContent = "Escolha uma senha diferente da senha inicial."; return; }
+  if (s1 !== s2){ erroEl.textContent = "As senhas não conferem."; return; }
+  const btn = document.getElementById("btnConfirmarNovaSenha");
+  btn.disabled = true;
+  try{
+    const { error: errSenha } = await supabaseClient.auth.updateUser({ password: s1 });
+    if (errSenha) throw errSenha;
+    const { error: errFlag } = await supabaseClient.rpc("marcar_senha_trocada");
+    if (errFlag) throw errFlag;
+    if (currentVendedorPerfil) currentVendedorPerfil.deveTrocarSenha = false;
+    document.getElementById("novaSenhaInput").value = "";
+    document.getElementById("novaSenhaConfirmInput").value = "";
+    esconderTrocarSenhaOverlay();
+  }catch(err){
+    erroEl.textContent = "Erro: " + (err.message || "não foi possível trocar a senha.");
+  }finally{
+    btn.disabled = false;
+  }
+});
 document.getElementById("btnLogoutVendedor").addEventListener("click", fazerLogoutVendedor);
 document.getElementById("btnCriarVendedor").addEventListener("click", async ()=>{
   const nome = document.getElementById("novoVendedorNome").value.trim();
   const email = document.getElementById("novoVendedorEmail").value.trim();
-  const senha = document.getElementById("novoVendedorSenha").value;
+  const telefone = document.getElementById("novoVendedorTelefone").value.trim();
   const statusEl = document.getElementById("statusCriarVendedor");
   statusEl.style.color = "";
   statusEl.textContent = "";
-  if (!email || !senha || senha.length<6){
+  if (!email){
     statusEl.style.color = "var(--red)";
-    statusEl.textContent = "Preencha email e uma senha com pelo menos 6 caracteres.";
+    statusEl.textContent = "Preencha o email do vendedor.";
     return;
   }
   const btn = document.getElementById("btnCriarVendedor");
@@ -132,9 +254,10 @@ document.getElementById("btnCriarVendedor").addEventListener("click", async ()=>
   statusEl.textContent = "Criando…";
   try{
     // A criação roda numa Edge Function (service_role fica só lá, nunca no navegador):
-    // ela cria o usuário no Auth já confirmado e ativa o profile, tudo em uma chamada.
+    // ela cria o usuário no Auth já confirmado (senha inicial fixa 000000,
+    // obrigado a trocar no primeiro login) e ativa o profile, tudo em uma chamada.
     const { data, error } = await supabaseClient.functions.invoke("create-vendedor", {
-      body: { nome, email, senha },
+      body: { nome, email, telefone },
     });
     if (error){
       // FunctionsHttpError não traz a mensagem da function em error.message —
@@ -148,10 +271,10 @@ document.getElementById("btnCriarVendedor").addEventListener("click", async ()=>
     if (data && data.error) throw new Error(data.error);
     await carregarListaVendedoresAdmin();
     statusEl.style.color = "var(--green)";
-    statusEl.textContent = "Vendedor criado! Já pode fazer login.";
+    statusEl.textContent = "Vendedor criado! Senha inicial: 000000 — ele(a) será obrigado(a) a trocar no primeiro login.";
     document.getElementById("novoVendedorNome").value = "";
     document.getElementById("novoVendedorEmail").value = "";
-    document.getElementById("novoVendedorSenha").value = "";
+    document.getElementById("novoVendedorTelefone").value = "";
   }catch(err){
     statusEl.style.color = "var(--red)";
     statusEl.textContent = "Erro: " + (err.message || "não foi possível criar.");
@@ -166,7 +289,7 @@ document.getElementById("btnRelatorioLigacoesPdf").addEventListener("click", imp
 document.addEventListener("keydown", e=>{ if (e.key==="Escape") fecharPropostaModal(); });
 document.getElementById("btnGerarExtratoSalario").addEventListener("click", gerarExtratoSalarioPeriodo);
 document.getElementById("btnVerificarDuplicados").addEventListener("click", ()=>{
-  const salarios = state.salarios || [];
+  const salarios = filtrarPorVendedor(state.salarios || []); // só verifica/remove duplicados do próprio vendedor
   const vistos = new Map(); // chave: data|tipo|valor|origemVendaId -> primeiro id encontrado
   const duplicados = [];
   salarios.forEach(s=>{
@@ -183,7 +306,7 @@ document.getElementById("btnVerificarDuplicados").addEventListener("click", ()=>
   }
   const totalDuplicado = salarios.filter(s=>duplicados.includes(s.id)).reduce((sum,s)=>sum+(Number(s.valor)||0),0);
   if (!confirm(`Encontrei ${duplicados.length} lançamento${duplicados.length===1?"":"s"} duplicado${duplicados.length===1?"":"s"}, somando ${moneyFmt(totalDuplicado)}.\n\nEsses são cópias exatas (mesma data, tipo e valor) de outro lançamento já existente. Quer remover as cópias e manter só o original de cada um?`)) return;
-  state.salarios = salarios.filter(s=>!duplicados.includes(s.id));
+  state.salarios = (state.salarios||[]).filter(s=>!duplicados.includes(s.id));
   persist(); renderAll();
   alert(`Pronto! ${duplicados.length} lançamento${duplicados.length===1?"":"s"} duplicado${duplicados.length===1?"":"s"} removido${duplicados.length===1?"":"s"}.`);
 });
@@ -288,6 +411,7 @@ document.getElementById("btnAplicarPremioNaVenda").addEventListener("click", ()=
     existente.pontos = r.est.pontos;
     existente.premio = premio;
     existente.data = todayISO();
+    existente.vendedorId = v.vendedorId || existente.vendedorId || null;
   } else {
     state.bancoVW.push({
       id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
@@ -298,6 +422,7 @@ document.getElementById("btnAplicarPremioNaVenda").addEventListener("click", ()=
       valor: r.est.valor,
       pontos: r.est.pontos,
       premio: premio,
+      vendedorId: v.vendedorId || null, // herda da venda de origem
     });
   }
 
@@ -306,10 +431,16 @@ document.getElementById("btnAplicarPremioNaVenda").addEventListener("click", ()=
   alert(`Prontinho! R$ ${NUMFG(premio)} entrou como Retorno do Banco VW na venda de ${v.cliente||"cliente"} e já foi salvo no histórico deste mês.`);
 });
 document.getElementById("btnLimparHistoricoBancoVW").addEventListener("click", ()=>{
-  if (!state.bancoVW || !state.bancoVW.length){ alert("Não há prêmios no histórico."); return; }
-  if (!confirm(`Excluir TODOS os ${state.bancoVW.length} prêmios do histórico? Essa ação não pode ser desfeita.`)) return;
-  state.bancoVW = [];
-  persist(); renderTblBancoVW();
+  // Só apaga o histórico do vendedor logado (ou de todos, se o admin estiver
+  // com "ver todos" ligado) — nunca o histórico de outro vendedor por engano.
+  const doVendedor = filtrarPorVendedor(state.bancoVW||[]);
+  if (!doVendedor.length){ alert("Não há prêmios no histórico."); return; }
+  if (!confirm(`Excluir TODOS os ${doVendedor.length} prêmios do histórico? Essa ação não pode ser desfeita.`)) return;
+  const idsRemover = new Set(doVendedor.map(x=>x.id));
+  const idsVendasAfetadas = doVendedor.map(x=>x.origemVendaId).filter(Boolean);
+  state.bancoVW = (state.bancoVW||[]).filter(x=>!idsRemover.has(x.id));
+  idsVendasAfetadas.forEach(resetarRetornoBancoDaVenda);
+  persist(); renderAll();
 });
 document.getElementById("btnImprimirPremioBancoVW").addEventListener("click", imprimirPremioBancoVW);
 document.getElementById("fipeTipo").addEventListener("change", fipeCarregarMarcas);
@@ -646,8 +777,9 @@ document.getElementById("formControle").addEventListener("submit", e=>{
     segLiquido:+document.getElementById("cSegLiquido").value||0, interacoes:+document.getElementById("cInteracoes").value||0,
     ts: Date.now(),
   };
-  if (!state.dias[k]) state.dias[k] = [];
-  state.dias[k].push(entrada);
+  const diasVendedor = diasDoVendedor(currentVendedorPerfil && currentVendedorPerfil.id);
+  if (!diasVendedor[k]) diasVendedor[k] = [];
+  diasVendedor[k].push(entrada);
   persist(); renderAll();
   e.target.reset();
   document.getElementById("cData").value = todayISO();
@@ -659,7 +791,7 @@ document.getElementById("formVenda").addEventListener("submit", e=>{
   const valor = currencyToNumber(document.getElementById("vValor").value);
   const tipoSel = document.getElementById("vTipo").value;
   let taxa, tipoLabel;
-  if (tipoSel==="VD"){ taxa = (Number(state.config.taxaVD)||0)/100; tipoLabel = "VD"; }
+  if (tipoSel==="VD"){ taxa = (Number(metasDoVendedorAtual().taxaVD)||0)/100; tipoLabel = "VD"; }
   else if (tipoSel==="CONSORCIO"){ taxa = 0.01; tipoLabel = "Consórcio"; }
   else if (tipoSel==="REPASSE"){ taxa = 0.003; tipoLabel = "Repasses"; }
   else { taxa = Number(tipoSel); tipoLabel = taxa===0.005 ? "0KM" : "Seminovo"; }
@@ -696,9 +828,16 @@ document.getElementById("formVenda").addEventListener("submit", e=>{
   };
   if (editId){
     const idx = state.vendas.findIndex(v=>v.id===editId);
+    // vendedorId nunca muda numa edição — mesmo se o admin (em "ver todos")
+    // editar a venda de outro vendedor, a posse continua sendo de quem criou.
     if (idx>-1) state.vendas[idx] = {...state.vendas[idx], ...dadosVenda};
   } else {
-    state.vendas.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), emplacamentoPago:false, acessoriosPago:false, seguroPago:false, ...dadosVenda });
+    state.vendas.push({
+      id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+      emplacamentoPago:false, acessoriosPago:false, seguroPago:false,
+      vendedorId: (currentVendedorPerfil && currentVendedorPerfil.id) || null,
+      ...dadosVenda,
+    });
   }
   persist(); renderAll();
   cancelarEdicaoVenda();
@@ -822,7 +961,11 @@ document.getElementById("formProposta").addEventListener("submit", e=>{
     const idx = state.propostas.findIndex(p=>p.id===editId);
     if (idx>-1) state.propostas[idx] = {...state.propostas[idx], ...dadosProposta};
   } else {
-    state.propostas.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), ...dadosProposta });
+    state.propostas.push({
+      id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+      vendedorId: (currentVendedorPerfil && currentVendedorPerfil.id) || null,
+      ...dadosProposta,
+    });
   }
   persist(); renderAll();
   e.target.reset();
@@ -875,7 +1018,7 @@ document.getElementById("formCliente").addEventListener("submit", e=>{
     ultimoContato: document.getElementById("clUlt").value,
     obs: document.getElementById("clObs").value,
     historico: [],
-    criadoPor: currentVendedorEmail || null,
+    vendedorId: (currentVendedorPerfil && currentVendedorPerfil.id) || null,
   });
   persist(); renderAll();
   e.target.reset();
@@ -883,8 +1026,7 @@ document.getElementById("formCliente").addEventListener("submit", e=>{
   document.getElementById("clUlt").value = todayISO();
 });
 document.getElementById("chkVerTodosClientes").addEventListener("change", e=>{
-  verTodosClientesVendedor = e.target.checked;
-  renderClientes();
+  toggleVerTodosVendedor(e.target.checked);
 });
 document.getElementById("clVei").addEventListener("change", ()=>{
   document.getElementById("clVeiOutroWrap").style.display = document.getElementById("clVei").value==="Outro" ? "block" : "none";
@@ -909,8 +1051,8 @@ document.getElementById("formHistorico").addEventListener("submit", e=>{
 });
 
 document.getElementById("btnSalvarConfig").addEventListener("click", ()=>{
-  state.config = {
-    mesRef: document.getElementById("cfgMes").value || state.config.mesRef,
+  // Metas são por vendedor — cada um define/edita só a própria.
+  Object.assign(metasDoVendedorAtual(), {
     metaVendas: +document.getElementById("cfgMeta").value||0,
     metaSeminovos: +document.getElementById("cfgMetaSemi").value||0,
     metaConsorcios: +document.getElementById("cfgMetaConsorcio").value||0,
@@ -924,6 +1066,11 @@ document.getElementById("btnSalvarConfig").addEventListener("click", ()=>{
     metaOfertas: +document.getElementById("cfgOfe").value||0,
     diasAlerta: +document.getElementById("cfgAlerta").value||7,
     taxaVD: +document.getElementById("cfgTaxaVD").value||0,
+  });
+  // O resto é da loja toda (compartilhado), não do vendedor individual.
+  state.config = {
+    ...state.config,
+    mesRef: document.getElementById("cfgMes").value || state.config.mesRef,
     vendedor: document.getElementById("cfgVendedor").value,
     concessionaria: document.getElementById("cfgConc").value,
   };
@@ -949,13 +1096,13 @@ document.getElementById("btnComissaoFinal").addEventListener("click", abrirRelat
 
 document.getElementById("btnSalvarMetaInsta").addEventListener("click", ()=>{
   const v = +document.getElementById("instaMetaInput").value || 0;
-  state.config.metaSeguidores = v;
+  metasDoVendedorAtual().metaSeguidores = v;
   persist(); renderAll();
 });
 
 document.getElementById("btnSalvarMetaSalario").addEventListener("click", ()=>{
   const v = +document.getElementById("metaSalarioInput").value || 0;
-  state.config.metaSalario = v;
+  metasDoVendedorAtual().metaSalario = v;
   persist(); renderAll();
 });
 
@@ -994,7 +1141,11 @@ document.getElementById("formSalario").addEventListener("submit", e=>{
     const idx = state.salarios.findIndex(s=>s.id===editId);
     if (idx>-1) state.salarios[idx] = {...state.salarios[idx], ...dados};
   } else {
-    state.salarios.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), ...dados });
+    state.salarios.push({
+      id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+      vendedorId: (currentVendedorPerfil && currentVendedorPerfil.id) || null,
+      ...dados,
+    });
   }
   persist(); renderAll();
   cancelarEdicaoSalario();
@@ -1051,7 +1202,7 @@ document.getElementById("formPonto").addEventListener("submit", e=>{
   e.preventDefault();
   const ds = document.getElementById("pontoData").value;
   const foraCidade = document.getElementById("pontoForaCidade").checked;
-  state.ponto[ds] = {
+  pontoDoVendedor(currentVendedorPerfil && currentVendedorPerfil.id)[ds] = {
     entrada: document.getElementById("pontoEntrada").value,
     saida: document.getElementById("pontoSaida").value,
     foraCidade: foraCidade,

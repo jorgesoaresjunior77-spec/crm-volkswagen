@@ -213,8 +213,8 @@
   .card-total.comissao-oculta .value{ color:var(--graphite); }
   @keyframes aguaFlow{ 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
   .olho-toggle{
-    position:absolute; top:12px; right:12px; width:34px; height:34px; border-radius:50%; z-index:3;
-    background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.45); color:#fff; font-size:16px;
+    position:absolute; top:10px; right:10px; width:26px; height:26px; border-radius:50%; z-index:3;
+    background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.45); color:#fff; font-size:13px;
     cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s ease;
   }
   .olho-toggle:hover{ background:rgba(255,255,255,.4); transform:scale(1.08); }
@@ -227,9 +227,21 @@
   .card-clicavel .value{ font-size:24px; }
   .dash-divider{ height:1px; background:linear-gradient(90deg,transparent,var(--border),transparent); margin:14px 0; position:relative; }
   .dash-divider::after{ content:""; position:absolute; inset:-6px 0; box-shadow:0 6px 10px -6px rgba(20,20,25,.12) inset; }
-  .gauges-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:20px; }
-  @media(max-width:1300px){ .gauges-row{ grid-template-columns:repeat(3,1fr); } }
-  @media(max-width:700px){ .gauges-row{ grid-template-columns:1fr; } }
+  /* Desktop: os 6 velocímetros (Geral, 0KM, Seminovos, Consórcios, VD, Repasses)
+     numa única linha — grid de 1fr garante que a soma das colunas nunca passa da
+     largura do container, então não existe rolagem horizontal: eles só encolhem
+     proporcionalmente. min-width:0 evita que o conteúdo interno force a coluna
+     a ficar maior que o 1fr calculado (padrão comum de overflow em grid). */
+  .gauges-row{ display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+  .gauges-row .gauge-box{ min-width:0; padding:0; }
+  .gauges-row .gauge-title{ font-size:10.5px; margin-top:4px; overflow-wrap:break-word; }
+  .gauges-row .gauge-label{ font-size:10.5px; margin-top:2px; }
+  @media(max-width:700px){
+    /* Mobile: 3 em cima, 3 embaixo — mesma técnica (grid 1fr), fonte menor ainda. */
+    .gauges-row{ grid-template-columns:repeat(3,1fr); gap:8px; row-gap:14px; }
+    .gauges-row .gauge-title{ font-size:9.5px; margin-top:3px; }
+    .gauges-row .gauge-label{ font-size:9.5px; margin-top:2px; }
+  }
   .gauge-box{ text-align:center; }
   .gauge-title{ font-size:12.5px; font-weight:800; color:var(--graphite); margin-top:6px; letter-spacing:.2px; }
   .gauge-label{ text-align:center; font-weight:800; font-size:12.5px; color:var(--text-dim); margin-top:4px; }
@@ -491,6 +503,7 @@
   .insta-kpi-value{ font-size:26px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; position:relative; }
   @keyframes instaPop{ from{ opacity:0; transform:translateY(10px) scale(.96); } to{ opacity:1; transform:translateY(0) scale(1); } }
   .insta-chart-wrap{ border-top:1px solid var(--border-light); padding-top:16px; }
+  #chartSalarioMes{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .insta-chart-title{ font-size:12.5px; font-weight:800; color:var(--graphite); margin-bottom:10px; }
   .insta-chart-title span{ font-weight:700; color:#C13584; margin-left:6px; }
   .insta-insights-list{ margin:0; padding-left:18px; font-size:12.5px; color:var(--text-dim); line-height:1.9; }
@@ -646,7 +659,7 @@
   .comissao-3col{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; width:100%; }
   .comissao-col{ padding:0 12px; min-width:0; display:flex; flex-direction:column; }
   .comissao-col:first-child{ padding-left:0; }
-  .comissao-col:last-child{ padding-right:0; }
+  .comissao-col:last-child{ padding-right:34px; } /* reserva espaço pro olho-toggle (26px + respiro), pra nunca cobrir o texto */
   .comissao-col:not(:last-child){ border-right:1px solid rgba(255,255,255,.28); }
   .comissao-col .label{ font-size:9.5px; white-space:normal; line-height:1.2; margin-bottom:3px; min-height:0; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
   .comissao-col .label .icone-grande{ font-size:15px; vertical-align:middle; margin-right:0; flex-shrink:0; }
@@ -655,7 +668,7 @@
   @media(max-width:640px){
     .comissao-3col{ grid-template-columns:1fr; gap:12px; }
     .comissao-col{ padding:0 0 12px; border-right:none !important; border-bottom:1px solid rgba(255,255,255,.28); }
-    .comissao-col:last-child{ border-bottom:none; padding-bottom:0; }
+    .comissao-col:last-child{ border-bottom:none; padding-bottom:0; padding-right:0; }
     .comissao-col-value{ font-size:19px; white-space:normal; }
   }
   .icone-grande{ font-size:22px; vertical-align:-4px; margin-right:2px; }
@@ -859,7 +872,7 @@
   @media (max-width:480px){
     .proposta-modal-overlay{ padding:10px; }
     .proposta-modal-box{ max-width:calc(100vw - 20px) !important; max-height:calc(100vh - 20px); }
-    #loginOverlay > div{ padding:20px; max-width:calc(100vw - 24px); }
+    #loginOverlay > div, #trocarSenhaOverlay > div{ padding:20px; max-width:calc(100vw - 24px); }
   }
 
   /* ===== "Histórico do mês" (Controle Diário) e "Resumo por Mês" (Salários) -> cards no mobile =====
@@ -1137,4 +1150,14 @@
     #view-vendas > #extratoPrintArea{ display:block !important; }
     .table-wrap{ max-height:none; overflow:visible; border:none; }
     * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+    /* Cards de proposta — tanto na janela de impressão dedicada (imprimirProposta)
+       quanto ao imprimir a tela normal de Propostas direto do navegador. */
+    .prop-card{
+      break-inside:avoid; page-break-inside:avoid; box-shadow:none !important;
+      border:1px solid #ccc; padding-right:18px; /* sem os botões, não precisa mais do respiro de 114px */
+    }
+    .prop-card-actions, .prop-card-editar, .prop-card-duplicar, .prop-card-excluir,
+    .prop-card-close{ display:none !important; }
+    .prop-group, .prop-categoria{ break-inside:avoid; page-break-inside:avoid; }
   }

@@ -1,25 +1,33 @@
 
 
+// Escuta mudanças em tempo real nas 7 tabelas que compõem o state (5 coleções +
+// vendedor_estado + loja_estado). Como cada uma tem RLS, o Postgres já nem entrega o
+// evento pra quem não pode ver aquela linha — um vendedor comum não recebe mais
+// notificação nenhuma sobre dados de outro vendedor (antes, o blob inteiro ecoava
+// pra todo mundo). Várias tabelas mudam juntas numa gravação só, então agrupamos
+// (debounce) antes de recarregar, em vez de recarregar uma vez por tabela.
+let _recargaRemotaTimer = null;
+function agendarRecargaRemota(){
+  clearTimeout(_recargaRemotaTimer);
+  _recargaRemotaTimer = setTimeout(()=>{ carregarEstadoNuvem(); }, 400);
+}
 function assinarMudancasRemotas(){
   if (!supabaseClient || nuvemAssinaturaAtiva) return;
   nuvemAssinaturaAtiva = true;
-  supabaseClient
-    .channel("crm_estado_"+WORKSPACE_ID)
-    .on("postgres_changes", { event:"UPDATE", schema:"public", table:"crm_estado", filter:`id=eq.${WORKSPACE_ID}` }, payload=>{
-      if (ignorarProximoEventoRemoto){ ignorarProximoEventoRemoto = false; return; }
-      if (payload.new && payload.new.dados){
-        state = payload.new.dados;
-        aplicarAjustesDeCompatibilidade();
-        renderAll();
-        statusNuvem("🟢 Atualizado agora por outro vendedor", "ok");
-      }
-    })
-    .subscribe();
+  const tabelas = ["vendas","propostas","salarios","banco_vw","clientes","vendedor_estado","loja_estado"];
+  const canal = supabaseClient.channel("crm_mudancas_"+WORKSPACE_ID);
+  tabelas.forEach(t=>{
+    canal.on("postgres_changes", { event:"*", schema:"public", table:t }, ()=>{
+      if (ignorarProximosEventosRemotos>0){ ignorarProximosEventosRemotos--; return; }
+      agendarRecargaRemota();
+    });
+  });
+  canal.subscribe();
 }
 
 const CAMPOS_DIA = ["ligInvalido","ligNao","ligAtendCom","ligAtendSem","wpp","sto","ree","feed","ofe","nov","ret","vis","td","prop","ven","avaliados","segLiquido","interacoes"];
 function diaSum(k){
-  const lista = state.dias[k] || [];
+  const lista = diasDoVendedorAtual()[k] || [];
   const acc = {ligInvalido:0,ligNao:0,ligAtendCom:0,ligAtendSem:0,wpp:0,sto:0,ree:0,feed:0,ofe:0,nov:0,ret:0,vis:0,td:0,prop:0,ven:0,avaliados:0,segLiquido:0,interacoes:0};
   lista.forEach(e=>{ CAMPOS_DIA.forEach(f=>{ acc[f]+= Number(e[f])||0; }); });
   if (!isDiaComLigacao(k)){
@@ -30,10 +38,10 @@ function diaSum(k){
   return acc;
 }
 function diasDoMesAtual(){
-  return Object.keys(state.dias).filter(k=>k.startsWith(state.config.mesRef)).sort();
+  return Object.keys(diasDoVendedorAtual()).filter(k=>k.startsWith(state.config.mesRef)).sort();
 }
 function diaInstaSnapshot(k){
-  const entries = state.dias[k] || [];
+  const entries = diasDoVendedorAtual()[k] || [];
   const snap = {seg:0, painel:0, insights:0, posts:0};
   entries.forEach(e=>{
     if (e.seg) snap.seg = e.seg;
@@ -174,7 +182,7 @@ function renderMetaVolks(){
   const dadosPorMes = [];
   for (let mm=1; mm<=12; mm++){
     const chave = `${anoRef}-${String(mm).padStart(2,"0")}`;
-    const vendidosNoMes = state.vendas.filter(v=>(v.data||"").slice(0,7)===chave && v.tipoLabel==="0KM").length;
+    const vendidosNoMes = filtrarPorVendedor(state.vendas).filter(v=>(v.data||"").slice(0,7)===chave && v.tipoLabel==="0KM").length;
     const registroDoMes = state.metasVolks[chave] || {};
     const cotaNoMes = registroDoMes.qtdVendedores>0 ? (registroDoMes.metaCarros||0)/registroDoMes.qtdVendedores : 0;
     acumVendido += vendidosNoMes;
@@ -189,7 +197,7 @@ function renderMetaVolks(){
     ${metaVolksChartSVG(dadosPorMes, anoRef)}`;
 }
 function renderInstagram(){
-  const cfg = state.config;
+  const cfg = {...state.config, ...metasDoVendedorAtual()};
   const dias = diasDoMesAtual();
   const labels = dias.map(k=>k.slice(8,10));
   const seriesSeg = instaSeriesForward(dias, "seg");
@@ -275,7 +283,7 @@ function renderInstagram(){
     ? `${seguidoresAtuais.toLocaleString("pt-BR")} / ${cfg.metaSeguidores.toLocaleString("pt-BR")} (${(pctMeta*100).toFixed(0)}%)`
     : "Defina uma meta ao lado";
   /* Estimativa de dias até a meta, com base no crescimento líquido médio (Seguidores Líquidos) */
-  const entradasComSegLiquido = Object.values(state.dias).flat().filter(e=>e && e.segLiquido);
+  const entradasComSegLiquido = Object.values(diasDoVendedorAtual()).flat().filter(e=>e && e.segLiquido);
   const mediaLiquidaDiaria = entradasComSegLiquido.length>=2
     ? entradasComSegLiquido.reduce((s,e)=>s+Number(e.segLiquido||0),0)/entradasComSegLiquido.length
     : null;
@@ -415,11 +423,20 @@ function totalMes(campo){
   return diasDoMesAtual().reduce((s,k)=>s+diaSum(k)[campo],0);
 }
 function vendasDoMesAtual(){
-  return state.vendas.filter(v=>v.data && v.data.startsWith(state.config.mesRef)).sort((a,b)=>a.data.localeCompare(b.data));
+  return filtrarPorVendedor(state.vendas).filter(v=>v.data && v.data.startsWith(state.config.mesRef)).sort((a,b)=>a.data.localeCompare(b.data));
+}
+// Zera retornoBanco/pontuacao/total de uma venda (usado quando um prêmio do
+// Banco VW é apagado, pra não deixar valor "fantasma" na venda de origem).
+function resetarRetornoBancoDaVenda(vendaId){
+  const v = state.vendas.find(x=>x.id===vendaId);
+  if (!v) return;
+  v.retornoBanco = 0;
+  v.pontuacao = 0;
+  v.total = (Number(v.comissao)||0) + (Number(v.emplacamentoValor)||0) + (Number(v.acessoriosValor)||0) + (Number(v.seguroValor)||0);
 }
 let competicaoCarrosEscopo = "mes";
 function renderCompeticaoCarros(){
-  const vendasConsideradas = competicaoCarrosEscopo==="mes" ? vendasDoMesAtual() : state.vendas;
+  const vendasConsideradas = competicaoCarrosEscopo==="mes" ? vendasDoMesAtual() : filtrarPorVendedor(state.vendas);
   const contagem = {};
   vendasConsideradas.forEach(v=>{
     const modelo = (v.modelo||"").trim() || (v.carro||"").trim() || "Sem modelo";
@@ -441,7 +458,7 @@ function metaProgressRow(label, atual, meta){
   </div>`;
 }
 function renderMetasProgress(){
-  const cfg = state.config;
+  const cfg = {...state.config, ...metasDoVendedorAtual()};
   const dim = diasUteisNoMes(cfg.mesRef);
   const dimLig = diasComLigacaoNoMes(cfg.mesRef);
   const metas = [
@@ -1018,7 +1035,8 @@ function renderMensagemDia(){
   const humorHoje = humorMedioDoDia(hojeISO);
   const vMesMsg = vendasDoMesAtual();
   const vendidosMsg = vMesMsg.filter(v=>v.tipoLabel!=="Consórcio").length;
-  const metaTotalMsg = (state.config.metaVendas||0) + (state.config.metaSeminovos||0) + (state.config.metaVD||0);
+  const metasMsg = metasDoVendedorAtual();
+  const metaTotalMsg = (metasMsg.metaVendas||0) + (metasMsg.metaSeminovos||0) + (metasMsg.metaVD||0);
   const faltam = Math.max(metaTotalMsg-vendidosMsg,0);
 
   let observacao;
@@ -1037,7 +1055,12 @@ function renderMensagemDia(){
   document.getElementById("mensagemDiaTexto").innerHTML = `${observacao}<br><span style="opacity:.8;font-size:12px;font-style:italic;">💬 "${principio.texto}" <span style="opacity:.7;font-style:normal;font-weight:700;">— ${principio.autor}</span></span>`;
 }
 function renderBannerPedidos(){
-  const pedidos = (state.clientes||[]).filter(c=>c.veiculo && c.veiculo.trim()!=="");
+  // Lembrete operacional PESSOAL: mesmo o admin, que recebe (via RLS) as linhas de
+  // todo mundo em state.clientes, só deve ver aqui os PRÓPRIOS pedidos — nunca os
+  // de outro vendedor automaticamente. filtrarPorVendedor() é o mesmo filtro usado
+  // em todo o resto do app (respeita o "ver todos" quando o admin liga por conta
+  // própria, mas nunca aparece sozinho pra ele).
+  const pedidos = filtrarPorVendedor(state.clientes||[]).filter(c=>c.veiculo && c.veiculo.trim()!=="");
   const btn = document.getElementById("btnVerPedidos");
   if (pedidos.length===0){ btn.style.display = "none"; return; }
   btn.style.display = "inline-block";
@@ -1144,7 +1167,7 @@ function iniciarLoopBolhas(){
 function renderDashboard(){
   renderBannerPedidos();
   renderMensagemDia();
-  const cfg = state.config;
+  const cfg = {...state.config, ...metasDoVendedorAtual()};
 
   {
     const feriadosMes = feriadosDoMes(cfg.mesRef);
@@ -1458,10 +1481,11 @@ function renderDashboard(){
 
   /* ===================== HUMOR x DESEMPENHO ===================== */
   {
-    const diasComHumor = dias.filter(k=> (state.humor[k]||[]).length>0);
+    const humorAtual = humorDoVendedorAtual();
+    const diasComHumor = dias.filter(k=> (humorAtual[k]||[]).length>0);
     const mediasDoMes = diasComHumor.map(k=>humorMedioDoDia(k));
     const mediaGeral = mediasDoMes.length ? mediasDoMes.reduce((a,b)=>a+b,0)/mediasDoMes.length : null;
-    const totalRegistrosHumor = diasComHumor.reduce((s,k)=>s+(state.humor[k]||[]).length,0);
+    const totalRegistrosHumor = diasComHumor.reduce((s,k)=>s+(humorAtual[k]||[]).length,0);
 
     document.getElementById("statsHumorCards").innerHTML = [
       ["😊 Humor Médio do Mês", mediaGeral!=null ? `${humorParaEmoji(mediaGeral)} ${mediaGeral.toFixed(1)}` : "—"],
@@ -1571,14 +1595,17 @@ const HUMOR_EMOJI = {1:"😢", 2:"😐", 3:"😊"};
 const HUMOR_LABEL = {1:"Triste", 2:"Indiferente", 3:"Feliz"};
 function registrarHumor(valor){
   const hoje = todayISO();
-  if (!state.humor[hoje]) state.humor[hoje] = [];
-  state.humor[hoje].push({valor, ts: Date.now()});
+  const id = currentVendedorPerfil && currentVendedorPerfil.id;
+  if (!id) return;
+  const humor = humorDoVendedor(id);
+  if (!humor[hoje]) humor[hoje] = [];
+  humor[hoje].push({valor, ts: Date.now()});
   persist();
   renderHumorHoje();
   renderDashboard();
 }
 function humorMedioDoDia(k){
-  const lista = state.humor[k] || [];
+  const lista = humorDoVendedorAtual()[k] || [];
   if (lista.length===0) return null;
   return lista.reduce((s,h)=>s+h.valor,0)/lista.length;
 }
@@ -1592,7 +1619,7 @@ function renderHumorHoje(){
   const el = document.getElementById("humorResumoHoje");
   if (!el) return;
   const hoje = todayISO();
-  const lista = state.humor[hoje] || [];
+  const lista = humorDoVendedorAtual()[hoje] || [];
   if (lista.length===0){
     el.innerHTML = `<span>Nenhum humor registrado hoje ainda. Toque num emoji sempre que quiser marcar como está se sentindo.</span>`;
     return;
@@ -1608,7 +1635,7 @@ function renderHumorHoje(){
   `;
 }
 function renderControle(){
-  const cfg = state.config;
+  const cfg = {...state.config, ...metasDoVendedorAtual()};
   const dias = diasDoMesAtual();
   const tbody = document.querySelector("#controleTable tbody");
   if (dias.length===0){
@@ -1617,7 +1644,7 @@ function renderControle(){
   }
   tbody.innerHTML = dias.map(k=>{
     const d = diaSum(k);
-    const qtd = (state.dias[k]||[]).length;
+    const qtd = (diasDoVendedorAtual()[k]||[]).length;
     const bateu = (d.lig||0)>=cfg.metaLig && (d.wpp||0)>=cfg.metaWpp && (d.sto||0)>=cfg.metaStories && (d.ree||0)>=cfg.metaReels && (d.feed||0)>=(cfg.metaFeed||0) && (d.ofe||0)>=(cfg.metaOfertas||0);
     const aberto = expandedDays.has(k);
     let linha = `<tr>
@@ -1630,7 +1657,7 @@ function renderControle(){
       <td><button class="danger" onclick="delDia('${k}')" title="Excluir todos os lançamentos do dia">✕</button></td>
     </tr>`;
     if (aberto){
-      const entradas = (state.dias[k]||[]);
+      const entradas = (diasDoVendedorAtual()[k]||[]);
       const subRows = entradas.map((e,idx)=>{
         const hora = e.ts ? new Date(e.ts).toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}) : `#${idx+1}`;
         const ligTotalEntrada = (Number(e.ligAtendCom)||0)+(Number(e.ligAtendSem)||0);
@@ -1650,7 +1677,8 @@ function renderControle(){
 }
 function delDia(k){
   if (!confirm("Excluir o lançamento de "+fmtDate(k)+"?")) return;
-  delete state.dias[k];
+  const id = currentVendedorPerfil && currentVendedorPerfil.id;
+  if (id) delete diasDoVendedor(id)[k];
   persist(); renderAll();
 }
 
@@ -1669,12 +1697,13 @@ function renderVendas(){
   renderCompeticaoCarros();
   const tbody = document.querySelector("#vendasTable tbody");
   const tfoot = document.querySelector("#vendasTable tfoot");
-  if (state.vendas.length===0){
+  const vendasVisiveis = filtrarPorVendedor(state.vendas);
+  if (vendasVisiveis.length===0){
     tbody.innerHTML = `<tr><td colspan="16" class="empty">Nenhuma venda registrada ainda.</td></tr>`;
     tfoot.innerHTML = "";
     return;
   }
-  const lista = [...state.vendas].sort((a,b)=> (b.data||"").localeCompare(a.data||""));
+  const lista = [...vendasVisiveis].sort((a,b)=> (b.data||"").localeCompare(a.data||""));
   tbody.innerHTML = lista.map(v=>{
     const anoTxt = (v.anoFab||v.anoModelo) ? `${v.anoFab||"—"}/${v.anoModelo||"—"}` : "—";
     return `<tr>
@@ -1692,11 +1721,11 @@ function renderVendas(){
       </td>
     </tr>`;
   }).join("");
-  const totalValor = state.vendas.reduce((s,v)=>s+(Number(v.valor)||0),0);
-  const totalEmplac = state.vendas.reduce((s,v)=>s+(Number(v.emplacamentoValor)||0),0);
-  const totalRetornoBanco = state.vendas.reduce((s,v)=>s+(Number(v.retornoBanco)||0),0);
-  const totalComissao = state.vendas.reduce((s,v)=>s+(Number(v.comissao)||0),0);
-  const totalGeral = state.vendas.reduce((s,v)=>s+(Number(v.total)||0),0);
+  const totalValor = vendasVisiveis.reduce((s,v)=>s+(Number(v.valor)||0),0);
+  const totalEmplac = vendasVisiveis.reduce((s,v)=>s+(Number(v.emplacamentoValor)||0),0);
+  const totalRetornoBanco = vendasVisiveis.reduce((s,v)=>s+(Number(v.retornoBanco)||0),0);
+  const totalComissao = vendasVisiveis.reduce((s,v)=>s+(Number(v.comissao)||0),0);
+  const totalGeral = vendasVisiveis.reduce((s,v)=>s+(Number(v.total)||0),0);
   tfoot.innerHTML = `<tr><td colspan="8">TOTAL (todas as vendas)</td><td>${moneyFmt(totalValor)}</td><td></td>
     <td>${moneyFmt(totalEmplac)}</td><td></td><td>${moneyFmt(totalRetornoBanco)}</td><td>${moneyFmt(totalComissao)}</td><td>${moneyFmt(totalGeral)}</td><td></td></tr>`;
 }
@@ -1739,6 +1768,10 @@ function cancelarEdicaoVenda(){
 function delVenda(id){
   if (!confirm("Excluir esta venda?")) return;
   state.vendas = state.vendas.filter(v=>v.id!==id);
+  // Sem isso, o(s) prêmio(s) do Banco VW ligados a essa venda (origemVendaId) ficavam
+  // "fantasmas": a venda de origem some, mas o valor continuava no histórico e nos
+  // totais do Banco VW pra sempre, porque nada os desvinculava/apagava.
+  state.bancoVW = (state.bancoVW||[]).filter(b=>b.origemVendaId!==id);
   persist(); renderAll();
 }
 
@@ -1748,7 +1781,7 @@ function renderExtrato(){
   const mesInput = document.getElementById("extMes");
   const mes = mesInput.value || state.config.mesRef;
   mesInput.value = mes;
-  const lista = state.vendas.filter(v=>v.data && v.data.startsWith(mes)).sort((a,b)=>a.data.localeCompare(b.data));
+  const lista = filtrarPorVendedor(state.vendas).filter(v=>v.data && v.data.startsWith(mes)).sort((a,b)=>a.data.localeCompare(b.data));
   const [y,m] = mes.split("-").map(Number);
   const nomeMes = new Date(y,m-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
   document.getElementById("extratoTitulo").textContent = `Extrato de Vendas — ${nomeMes}`;
@@ -1933,7 +1966,9 @@ function renderHistoricoLista(c){
 
 /* ============================= RENDER: CONFIG ============================= */
 function renderConfig(){
-  const c = state.config;
+  // Metas (metaVendas, metaSalario, etc.) são por vendedor — cada um define a
+  // própria; o resto (mesRef, vendedor, concessionaria, roteiros) é da loja toda.
+  const c = {...state.config, ...metasDoVendedorAtual()};
   document.getElementById("cfgMes").value = c.mesRef;
   document.getElementById("cfgMeta").value = c.metaVendas;
   document.getElementById("cfgMetaSemi").value = c.metaSeminovos;
@@ -2009,7 +2044,7 @@ const TIPOS_SALARIO = [
   {key:"Seguros", label:"Seguros", icone:"🛡️"},
 ];
 function renderSalarios(){
-  const salarios = state.salarios || [];
+  const salarios = filtrarPorVendedor(state.salarios || []);
   const cfg = state.config;
 
   // resumo do mês de referência configurado
@@ -2133,7 +2168,7 @@ function gerarExtratoSalarioPeriodo(){
   if (!inicio || !fim){ box.innerHTML = `<div class="empty">Escolha a data de início e a data de fim.</div>`; return; }
   if (fim < inicio){ box.innerHTML = `<div class="empty">A data de fim precisa ser depois da data de início.</div>`; return; }
 
-  const lista = [...(state.salarios||[])].filter(s=>s.data>=inicio && s.data<=fim).sort((a,b)=>(a.data||"").localeCompare(b.data||""));
+  const lista = [...filtrarPorVendedor(state.salarios||[])].filter(s=>s.data>=inicio && s.data<=fim).sort((a,b)=>(a.data||"").localeCompare(b.data||""));
   const totalPeriodo = lista.reduce((s,x)=>s+(Number(x.valor)||0),0);
   const porTipo = {};
   lista.forEach(s=>{ porTipo[s.tipo] = (porTipo[s.tipo]||0) + (Number(s.valor)||0); });
@@ -2165,7 +2200,7 @@ function gerarExtratoSalarioPeriodo(){
 /* ============================= PONTO / HORAS EXTRAS ============================= */
 let pontoMesAtual = new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,"0");
 function abrirPontoModal(dataStr){
-  const reg = state.ponto[dataStr] || {};
+  const reg = pontoDoVendedorAtual()[dataStr] || {};
   document.getElementById("pontoData").value = dataStr;
   document.getElementById("pontoModalTitulo").textContent = "Registro de "+fmtDate(dataStr);
   document.getElementById("pontoEntrada").value = reg.entrada || "";
@@ -2175,7 +2210,7 @@ function abrirPontoModal(dataStr){
   document.getElementById("pontoCarroTipo").value = reg.carroTipo || "loja";
   document.getElementById("pontoObs").value = reg.obs || "";
   atualizarCamposPonto();
-  document.getElementById("btnExcluirPonto").style.display = state.ponto[dataStr] ? "block" : "none";
+  document.getElementById("btnExcluirPonto").style.display = pontoDoVendedorAtual()[dataStr] ? "block" : "none";
   document.getElementById("pontoModalOverlay").classList.add("open");
 }
 function fecharPontoModal(){
@@ -2370,6 +2405,7 @@ function renderDatasEspeciais(){
   document.getElementById("datasEspeciaisWrap").innerHTML = cards.join("");
 }
 function renderPontoCalendario(){
+  const pontoAtual = pontoDoVendedorAtual();
   const [y,m] = pontoMesAtual.split("-").map(Number);
   document.getElementById("pontoMesLabel").textContent = `${MESES_SAL[m-1]} / ${y}`;
   const dim = diasNoMes(pontoMesAtual);
@@ -2379,7 +2415,7 @@ function renderPontoCalendario(){
   for (let i=0;i<firstDow;i++) html += `<div></div>`;
   for (let d=1; d<=dim; d++){
     const ds = pontoMesAtual+"-"+String(d).padStart(2,"0");
-    const reg = state.ponto[ds];
+    const reg = pontoAtual[ds];
     const temHora = reg && (reg.entrada || reg.saida);
     const temViagem = reg && reg.foraCidade;
     const bg = reg ? (temViagem ? "rgba(255,206,0,.25)" : "rgba(204,0,0,.12)") : "var(--card-tint)";
@@ -2390,19 +2426,20 @@ function renderPontoCalendario(){
   }
   document.getElementById("pontoCalBox").innerHTML = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;">${html}</div>`;
 
-  const registrosDoMes = diasDoMesPonto(pontoMesAtual).filter(ds=>state.ponto[ds]);
+  const registrosDoMes = diasDoMesPonto(pontoMesAtual).filter(ds=>pontoAtual[ds]);
   const tbody = document.querySelector("#tblPonto tbody");
   tbody.innerHTML = registrosDoMes.length ? registrosDoMes.map(ds=>{
-    const r = state.ponto[ds];
+    const r = pontoAtual[ds];
     const viagemTxt = r.foraCidade ? `✈️ ${r.transporte==="carro"?("Carro ("+(r.carroTipo==="loja"?"da loja":"próprio")+")"):r.transporte}` : "—";
     return `<tr><td>${fmtDate(ds)}</td><td>${r.entrada||"—"}</td><td>${r.saida||"—"}</td><td>${viagemTxt}</td><td>${r.obs||""}</td></tr>`;
   }).join("") : `<tr><td colspan="5" class="empty">Nenhum registro de ponto este mês.</td></tr>`;
 }
 function delPonto(){
   const ds = document.getElementById("pontoData").value;
-  if (!ds || !state.ponto[ds]) return;
+  const id = currentVendedorPerfil && currentVendedorPerfil.id;
+  if (!ds || !id || !pontoDoVendedor(id)[ds]) return;
   if (!confirm("Excluir o registro de ponto desse dia?")) return;
-  delete state.ponto[ds];
+  delete pontoDoVendedor(id)[ds];
   persist(); renderAll();
   fecharPontoModal();
 }
@@ -2621,8 +2658,13 @@ function renderGerenteForm(){
   if (est.modelo && modelos.includes(est.modelo)){ sel.value = est.modelo; popVersoesG(); }
   document.getElementById("g-dias").value = est.dias!=null ? est.dias : "";
   document.getElementById("g-fat").value = est.fat || "";
-  document.getElementById("g-preco").value = est.preco ? NUMFG(est.preco) : "";
-  document.getElementById("g-usado").value = est.usado ? NUMFG(est.usado) : "";
+  // Nunca reescreve um campo de moeda que está com foco (usuário digitando):
+  // um re-render disparado por realtime/outro evento no meio da digitação não
+  // pode resetar valor/cursor do campo (era a causa do valor "tremendo").
+  const campoPreco = document.getElementById("g-preco");
+  if (document.activeElement !== campoPreco) campoPreco.value = est.preco ? NUMFG(est.preco) : "";
+  const campoUsado = document.getElementById("g-usado");
+  if (document.activeElement !== campoUsado) campoUsado.value = est.usado ? NUMFG(est.usado) : "";
   document.getElementById("g-ger").value = String(est.gerPct).replace(".",",");
   document.getElementById("g-cor").value = est.cor || "";
   document.getElementById("g-pacotes").value = est.pacotes || "";
@@ -2722,17 +2764,15 @@ function calcularGerente(){
     box.hidden = false;
     if (!est.op) est.op = ops[0];
     const linhasPorOp = ops.map(o=>achadas.find(x=>x.op===o));
-    // Se todas as opções citam o MESMO texto de taxas combinado (só o trade-in muda entre elas),
-    // separa cada taxa 1:1 por posição em vez de repetir a lista inteira em cada opção —
-    // senão cada taxa parece vinculada a todos os trade-ins ao mesmo tempo.
-    const mesmoTextoEmTodas = linhasPorOp.every(r=>r.tx===linhasPorOp[0].tx);
-    const chipsBase = mesmoTextoEmTodas ? parseTaxasElegiveis(linhasPorOp[0].tx) : null;
-    const podeSepararPorPosicao = !!(chipsBase && chipsBase.length===ops.length);
+    // Cada opção usa SEMPRE a taxa (r.tx) e o trade-in (r.ti) da sua PRÓPRIA linha
+    // de regra — nunca um "split" adivinhado por posição/contagem de chips. Essa
+    // é a mesma fonte de verdade usada mais abaixo, no cálculo central, quando uma
+    // opção é selecionada (reg = achadas.find(op===est.op)) — garante que o painel
+    // esquerdo nunca mostre uma taxa vinculada a um trade-in que não é o dela.
     document.getElementById("g-opcoes").innerHTML = ops.map((o,idx)=>{
       const r = linhasPorOp[idx];
-      const textoTaxa = podeSepararPorPosicao ? chipsBase[idx].label : r.tx;
       return `<div class="g-opt ${est.op===o?'sel':''}" data-op="${o}">
-        <span class="t">${textoTaxa}</span><span class="v">trade-in ${BRL0G(r.ti)}</span></div>`;
+        <span class="t">${r.tx||"—"}</span><span class="v">trade-in ${BRL0G(r.ti)}</span></div>`;
     }).join("");
     document.querySelectorAll("#g-opcoes .g-opt").forEach(el=>{
       el.addEventListener("click", ()=>{ est.op = +el.dataset.op; calcularGerente(); persist(); });
@@ -3037,7 +3077,7 @@ function renderTabelaNotaBancoVW(){
 }
 function popularOrigemVendaBancoVW(){
   const sel = document.getElementById("bv-venda-origem");
-  const todasVendas = [...(state.vendas||[])].sort((a,b)=>(b.data||"").localeCompare(a.data||""));
+  const todasVendas = [...filtrarPorVendedor(state.vendas||[])].sort((a,b)=>(b.data||"").localeCompare(a.data||""));
   sel.innerHTML = '<option value="">— Preencher manualmente —</option>' + todasVendas.map(v=>
     `<option value="${v.id}">${fmtDate(v.data)} · ${v.cliente||"—"} · ${v.carro||""} ${v.modelo||""}${v.pontuacao?" · "+Number(v.pontuacao).toFixed(2)+" pts":""}</option>`
   ).join("");
@@ -3099,7 +3139,7 @@ function calcularEExibirBancoVW(){
     </div>`;
 }
 function renderTblBancoVW(){
-  const lista = [...(state.bancoVW||[])].sort((a,b)=>(b.data||"").localeCompare(a.data||""));
+  const lista = [...filtrarPorVendedor(state.bancoVW||[])].sort((a,b)=>(b.data||"").localeCompare(a.data||""));
   document.getElementById("bvHistoricoResumo").textContent = lista.length
     ? `${lista.length} ${lista.length===1?"prêmio":"prêmios"} · total ${moneyFmt(lista.reduce((s,x)=>s+x.premio,0))}`
     : "";
@@ -3125,8 +3165,10 @@ function renderTblBancoVW(){
 }
 function delPremioBancoVW(id){
   if (!confirm("Excluir este prêmio do histórico?")) return;
+  const item = (state.bancoVW||[]).find(x=>x.id===id);
   state.bancoVW = state.bancoVW.filter(x=>x.id!==id);
-  persist(); renderTblBancoVW();
+  if (item && item.origemVendaId) resetarRetornoBancoDaVenda(item.origemVendaId);
+  persist(); renderAll(); // não só renderTblBancoVW() — a comissão/gráficos/extrato também precisam refletir o valor zerado
 }
 function imprimirPremioBancoVW(){
   const r = ultimoResultadoBancoVW;
