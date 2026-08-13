@@ -52,10 +52,40 @@ function statusNuvem(texto, classe){
   if (a){ a.textContent = texto; a.className = classe; }
 }
 
-function iniciarClienteNuvem(){
-  if (!window.supabase) { supabaseClient = null; return false; }
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  return true;
+// A causa mais comum de "Sem conexão com o banco de dados" no login NUNCA foi o Supabase em si —
+// foi o <script> da biblioteca (cdn.jsdelivr.net/npm/@supabase/supabase-js) não terminar de
+// carregar a tempo no navegador (rede lenta, bloqueador de conteúdo, hiccup momentâneo). Antes,
+// se `window.supabase` não existisse nesse instante, o app desistia na hora. Agora tenta de novo:
+// recarrega o script algumas vezes, com atraso crescente, antes de reportar falha de verdade.
+const SUPABASE_JS_CDN_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+const INICIAR_NUVEM_ATRASOS_MS = [1000, 2000, 4000]; // 3 novas tentativas após a 1ª (~7s no total)
+
+function carregarScriptSupabaseJs(){
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement("script");
+    // cache-buster: evita que o navegador reuse uma resposta de rede já falha/incompleta
+    s.src = SUPABASE_JS_CDN_URL + "?retry=" + Date.now();
+    s.onload = ()=>resolve();
+    s.onerror = ()=>reject(new Error("Falha ao carregar supabase-js do CDN"));
+    document.head.appendChild(s);
+  });
+}
+
+async function iniciarClienteNuvem(){
+  for (let tentativa=0; tentativa<=INICIAR_NUVEM_ATRASOS_MS.length; tentativa++){
+    if (window.supabase){
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      if (tentativa>0) statusNuvem("🟢 Conectado ao banco de dados", "ok");
+      return true;
+    }
+    if (tentativa < INICIAR_NUVEM_ATRASOS_MS.length){
+      statusNuvem(`🟡 Conectando ao banco de dados… tentativa ${tentativa+2}`, "pending");
+      await new Promise(r=>setTimeout(r, INICIAR_NUVEM_ATRASOS_MS[tentativa]));
+      await carregarScriptSupabaseJs().catch(()=>{}); // se falhar de novo, o loop tenta mais uma vez
+    }
+  }
+  supabaseClient = null;
+  return false;
 }
 
 // {} (vindo do banco pra um vendedor sem dado ainda) precisa virar null pra que os "||

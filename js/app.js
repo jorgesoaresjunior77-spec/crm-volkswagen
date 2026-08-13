@@ -188,8 +188,17 @@ document.getElementById("btnFazerLogin").addEventListener("click", async ()=>{
   const erroEl = document.getElementById("loginErro");
   erroEl.textContent = "";
   if (!email || !senha){ erroEl.textContent = "Preencha email e senha."; return; }
-  if (!supabaseClient){ erroEl.textContent = "Sem conexão com o banco de dados no momento. Tente novamente em instantes."; return; }
   const btn = document.getElementById("btnFazerLogin");
+  if (!supabaseClient){
+    // Ainda não conectou (ou as tentativas automáticas do carregamento da página já
+    // desistiram) — tenta reconectar agora mesmo, na hora do clique, em vez de só avisar.
+    btn.disabled = true; btn.textContent = "Conectando…";
+    erroEl.textContent = "Conectando ao banco de dados…";
+    const ok = await iniciarClienteNuvem();
+    btn.disabled = false; btn.textContent = "Entrar";
+    if (!ok){ erroEl.textContent = "Sem conexão com o banco de dados no momento. Tente novamente em instantes."; return; }
+    erroEl.textContent = "";
+  }
   btn.disabled = true; btn.textContent = "Entrando…";
   try{
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
@@ -1220,9 +1229,11 @@ renderAll(); // estado padrão inicial, enquanto verifica sessão/carrega do ban
 // do dia mudar (meio-dia / meia-noite), sem o usuário precisar atualizar a página.
 setInterval(renderMensagemDia, 60000);
 
-if (iniciarClienteNuvem()){
-  verificarSessaoLogin();
-} else {
-  statusNuvem("🔴 Sem conexão com o banco de dados", "err");
-  mostrarLoginOverlay();
-}
+iniciarClienteNuvem().then(ok=>{
+  if (ok){
+    verificarSessaoLogin();
+  } else {
+    statusNuvem("🔴 Sem conexão com o banco de dados", "err");
+    mostrarLoginOverlay();
+  }
+});
