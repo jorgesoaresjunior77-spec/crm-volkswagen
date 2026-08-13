@@ -554,38 +554,96 @@ function salarioMesAtualChartSVG(labels, values){
   }).join("");
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">${grid}${bars}</svg>`;
 }
-function salarioHistoricoChartSVG(labels, values){
-  // GRÁFICO 2 — histórico geral (todos os anos), compacto: só uma visão geral,
-  // não precisa de destaque nem de muito espaço. Largura literal (não 100%)
-  // dentro de um contêiner com overflow-x:auto, pra rolar quando houver muitos
-  // meses acumulados em vários anos, em vez de espremer tudo.
-  if (values.every(v=>v===0) || values.length===0) return `<div class="empty">Sem dados suficientes ainda.</div>`;
-  const valoresTxt = values.map(v=>moneyFmt(v).replace("R$","").trim());
-  const maiorTxtLen = Math.max(...valoresTxt.map(t=>t.length));
-  const colW = Math.max(52, maiorTxtLen*5.6 + 12);
-  const w=Math.max(420, values.length*colW), h=170, padL=34, padR=10, padT=24, padB=28;
+function salarioHistoricoLinhaSVG(labels, values, larguraPx, alturaPx){
+  // GRÁFICO 2 — histórico geral (todos os anos): linha com pontos, preenchendo de verdade
+  // a área do card. `larguraPx`/`alturaPx` vêm do tamanho REAL já medido do contêiner (ver
+  // renderSalarios) — o viewBox usa esses mesmos valores em pixels (escala 1:1, sem
+  // esticar/distorcer texto ou círculos), então o gráfico ocupa exatamente o espaço
+  // disponível, em qualquer largura de tela, sem precisar de rolagem horizontal.
+  if (values.length===0 || values.every(v=>v===0)) return `<div class="empty">Sem dados suficientes ainda.</div>`;
+  const n = values.length;
+  const w = Math.max(280, Math.round(larguraPx||760));
+  const h = Math.max(200, Math.round(alturaPx||340));
+  const padL=42, padR=16, padT=36, padB=48;
+  const plotW = w-padL-padR, plotH = h-padT-padB;
+  const colW = n>1 ? plotW/(n-1) : plotW;
+
   const max = Math.max(1, ...values);
-  const bw = (w-padL-padR)/values.length - 7;
-  const idxMax = values.indexOf(Math.max(...values));
-  const cores = ["#E10600","#F7C600","#1FA463","#2E86DE","#833AB4","#FD7E14","#17A398","#C2185B","#6D4C41","#00838F","#E23B4E","#0E7C86"];
-  const grid = [0,1].map(f=>{
-    const y = h-padB-f*(h-padT-padB);
-    return `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="#E1E3E8" stroke-width="1"/>
-            <text x="${padL-6}" y="${y+3}" font-size="7.5" text-anchor="end" fill="#9B948C">${Math.round(max*f/1000)}k</text>`;
+  const escalaX = i => padL + i*colW;
+  const escalaY = v => padT + plotH - (v/max)*plotH;
+  const valoresTxt = values.map(v=>moneyFmt(v).replace("R$","").trim());
+
+  // fonte e ponto escalam com o espaço disponível por coluna, sempre dentro de limites legíveis
+  const fontValor = Math.max(9, Math.min(13.5, colW*0.32));
+  const fontMes = Math.max(8, Math.min(11.5, colW*0.28));
+  const raioPonto = Math.max(2.4, Math.min(5, colW*0.16));
+
+  // com muitos meses, mostra só 1 rótulo a cada N (nunca sobrepõe); a LINHA e os PONTOS
+  // continuam representando TODOS os meses — só o texto é que rareia quando aperta.
+  // Multiplicador conservador (fonte em negrito) + folga fixa, pra sobrar margem real
+  // entre rótulos vizinhos em vez de estimar em cima da hora.
+  const passo = larguraTexto => colW>=larguraTexto ? 1 : Math.ceil(larguraTexto/colW);
+  const passoMes = passo(Math.max(...labels.map(l=>l.length))*fontMes*0.72 + 6);
+  const passoValor = passo(Math.max(...valoresTxt.map(t=>t.length))*fontValor*0.72 + 6);
+  // Primeiro e último ponto sempre usam âncora start/end (nunca "middle") — assim o texto
+  // cresce PRA DENTRO do gráfico em vez de vazar pra fora da borda do card.
+  const anchorDe = i => i===0 ? "start" : (i===n-1 ? "end" : "middle");
+  const dxDe = anchor => anchor==="start" ? 4 : (anchor==="end" ? -4 : 0);
+  // monta o conjunto de índices visíveis a partir do padrão regular (a cada N), sempre
+  // incluindo os `forcados` (pontas + melhor mês) — e limpando qualquer vizinho do padrão
+  // que ficaria colado demais em algum forçado, pra nunca colidir com eles. Pontas (índice
+  // 0 e n-1) usam âncora start/end, que projeta o texto INTEIRO pra um só lado (em vez de
+  // metade pra cada lado, como a âncora "middle") — por isso pedem o dobro de folga.
+  function indicesVisiveis(passoUsado, forcados, forcadosNaBorda){
+    const idx = new Set();
+    for (let i=0;i<n;i++){ if (i % passoUsado === 0) idx.add(i); }
+    forcados.forEach(fi=>{
+      const alcance = forcadosNaBorda.has(fi) ? passoUsado*2 : passoUsado;
+      for (let i=0;i<n;i++){ if (i!==fi && Math.abs(i-fi)<alcance) idx.delete(i); }
+    });
+    forcados.forEach(fi=>idx.add(fi));
+    return idx;
+  }
+
+  const idxMax = values.indexOf(max);
+  const bordas = new Set(n>1 ? [0, n-1] : [0]);
+  const indicesComValor = indicesVisiveis(passoValor, n>1 ? [0, n-1, idxMax] : [0], bordas);
+  const indicesComMes = indicesVisiveis(passoMes, n>1 ? [0, n-1] : [0], bordas);
+
+  const grid = [0,0.5,1].map(f=>{
+    const y = padT + plotH - f*plotH;
+    return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="#E1E3E8" stroke-width="1"/>
+            <text x="${padL-8}" y="${(y+3).toFixed(1)}" font-size="9" text-anchor="end" fill="#9B948C">${Math.round(max*f/1000)}k</text>`;
   }).join("");
-  const bars = values.map((v,i)=>{
-    const bh = Math.max(1,(v/max)*(h-padT-padB));
-    const x = padL + i*(bw+7);
-    const y = h-padB-bh;
-    const cor = cores[i%cores.length];
-    const destaque = i===idxMax && v>0;
-    return `<g class="viz-glow">
-      <rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${cor}" ${destaque?'stroke="#F7C600" stroke-width="1.5"':''}/>
-      <text x="${x+bw/2}" y="${y-4}" font-size="7.5" text-anchor="middle" fill="${destaque?'#B8790F':'#48474F'}" font-weight="700">${valoresTxt[i]}</text>
-      <text x="${x+bw/2}" y="${h-padB+12}" font-size="7" text-anchor="middle" fill="#8a8f98" font-weight="600">${labels[i]}</text>
+
+  const pontosLinha = values.map((v,i)=>`${escalaX(i).toFixed(1)},${escalaY(v).toFixed(1)}`).join(" ");
+  const areaPath = `M${escalaX(0).toFixed(1)},${(h-padB).toFixed(1)} L${pontosLinha.split(" ").join(" L")} L${escalaX(n-1).toFixed(1)},${(h-padB).toFixed(1)} Z`;
+
+  const marcadores = values.map((v,i)=>{
+    const x = escalaX(i), y = escalaY(v);
+    const destaque = i===idxMax;
+    const anchor = anchorDe(i);
+    const dx = dxDe(anchor);
+    const paraCima = i%2===0;
+    const mostrarValor = indicesComValor.has(i);
+    const mostrarMes = indicesComMes.has(i);
+    const yValor = paraCima ? y-14 : y+18;
+    return `<g>
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(destaque?raioPonto+1.4:raioPonto).toFixed(1)}" fill="${destaque?'#F7C600':'#E10600'}" stroke="#fff" stroke-width="1.4" class="viz-glow"/>
+      ${mostrarValor?`<text x="${(x+dx).toFixed(1)}" y="${yValor.toFixed(1)}" font-size="${fontValor.toFixed(1)}" text-anchor="${anchor}" fill="${destaque?'#B8790F':'#3A3A3A'}" font-weight="800">${valoresTxt[i]}</text>`:""}
+      ${mostrarMes?`<text x="${(x+dx).toFixed(1)}" y="${(h-padB+18).toFixed(1)}" font-size="${fontMes.toFixed(1)}" text-anchor="${anchor}" fill="#8a8f98" font-weight="700">${labels[i]}</text>`:""}
     </g>`;
   }).join("");
-  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${grid}${bars}</svg>`;
+
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+    <defs><linearGradient id="histAreaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E10600" stop-opacity="0.22"/><stop offset="100%" stop-color="#E10600" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${grid}
+    <path d="${areaPath}" fill="url(#histAreaGrad)"/>
+    <polyline points="${pontosLinha}" fill="none" stroke="#E10600" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" class="viz-glow"/>
+    ${marcadores}
+  </svg>`;
 }
 function salarioTipoChartSVG(tipos, valores, cores){
   const total = valores.reduce((a,b)=>a+b,0);

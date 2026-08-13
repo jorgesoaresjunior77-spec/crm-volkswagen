@@ -2105,17 +2105,25 @@ function renderSalarios(){
     mesesDoAnoAtual.map(m=>totalDoMesSal(`${anoAtualSal}-${String(m).padStart(2,"0")}`))
   );
 
-  // GRÁFICO 2: histórico geral, todos os anos existentes no sistema (compacto)
-  const mesesOrdenados = Object.keys(porMes).sort();
-  document.getElementById("chartSalarioHistorico").innerHTML = salarioHistoricoChartSVG(
-    mesesOrdenados.map(m=>m.slice(5,7)+"/"+m.slice(2,4)),
-    mesesOrdenados.map(totalDoMesSal)
-  );
+  // "Total por Tipo" primeiro: sua altura (fixa, 9 categorias) é o que define a altura da
+  // linha do grid nesta dupla de cards — o histórico (abaixo) precisa medir o card DEPOIS
+  // que essa altura já está definida, senão mediria um valor desatualizado.
   const coresPorTipo = ["#2E86DE","#1FA463","#F7C600","#833AB4","#FD7E14","#17A398","#C2185B"];
   document.getElementById("chartSalarioTipo").innerHTML = salarioTipoChartSVG(
     TIPOS_SALARIO.map(t=>t.label),
     TIPOS_SALARIO.map(t=>Math.round(salarios.filter(s=>s.tipo===t.key).reduce((a,s)=>a+(Number(s.valor)||0),0))),
     coresPorTipo
+  );
+
+  // GRÁFICO 2: histórico geral, todos os anos existentes no sistema — gráfico de linha
+  // preenchendo a área real do card (ver comentário na função sobre a medição em pixels).
+  const mesesOrdenados = Object.keys(porMes).sort();
+  const containerHistorico = document.getElementById("chartSalarioHistorico");
+  document.getElementById("chartSalarioHistorico").innerHTML = salarioHistoricoLinhaSVG(
+    mesesOrdenados.map(m=>MESES_SAL[Number(m.slice(5,7))-1].slice(0,3)+"/"+m.slice(2,4)),
+    mesesOrdenados.map(totalDoMesSal),
+    containerHistorico.clientWidth,
+    containerHistorico.clientHeight
   );
 
   { // ===== Panorama / Insights de Salário =====
