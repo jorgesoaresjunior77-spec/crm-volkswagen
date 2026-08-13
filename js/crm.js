@@ -965,10 +965,33 @@ function renderCharts(){
   renderActivityCalendar();
   renderInstagram();
 }
+// Hash simples e determinístico (djb2-like) — mesma chave sempre gera o mesmo
+// número, em qualquer navegador/usuário, sem precisar de um servidor.
+function hashChaveFrase(str){
+  let h = 0;
+  for (let i=0;i<str.length;i++){ h = (Math.imul(31,h) + str.charCodeAt(i)) | 0; }
+  // Finalizador de avalanche (mesma ideia do murmur3 fmix32): sem isso, chaves
+  // quase iguais (ex.: só o período do dia muda, "...-P1" vs "...-P2") geram
+  // índices vizinhos e previsíveis — com o mix, o resultado fica bem disperso.
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return Math.abs(h);
+}
+// O dia é dividido em 2 períodos (00h–11h59 e 12h–23h59). A chave inclui
+// ano+mês+dia+período, então a frase escolhida é sempre a mesma pra todo
+// mundo durante aquele período (estável), mas parece aleatória de um
+// período pro outro (não segue uma ordem sequencial previsível).
+function chavePeriodoDoDia(data){
+  const y = data.getFullYear();
+  const m = String(data.getMonth()+1).padStart(2,"0");
+  const d = String(data.getDate()).padStart(2,"0");
+  const periodo = data.getHours()<12 ? "P1" : "P2";
+  return `${y}-${m}-${d}-${periodo}`;
+}
 function renderMensagemDia(){
   const cfg = state.config;
   const hoje = new Date();
-  const diaDoAno = Math.floor((hoje - new Date(hoje.getFullYear(),0,0)) / 86400000);
   const principios = [
     { texto:"Você fica mais forte com o fracasso do que com o sucesso.", autor:"Jordan Belfort" },
     { texto:"Se falta coragem para começar, você já terminou.", autor:"Joe Girard" },
@@ -1028,8 +1051,10 @@ function renderMensagemDia(){
     { texto:"A gentileza é a luz que dissolve todas as paredes entre as pessoas.", autor:"Paramahansa Yogananda" },
     { texto:"Domine sua mente e ela será sua melhor amiga.", autor:"Paramahansa Yogananda" },
     { texto:"A verdadeira autoanálise é a maior arte do progresso.", autor:"Paramahansa Yogananda" },
+    { texto:"Devemos ser hoje melhores do que fomos ontem, e amanhã, melhores do que somos hoje.", autor:"Chico Xavier" },
+    { texto:"A saudade é a certeza de que amamos e fomos amados.", autor:"Chico Xavier" },
   ];
-  const principio = principios[diaDoAno % principios.length];
+  const principio = principios[hashChaveFrase(chavePeriodoDoDia(hoje)) % principios.length];
 
   const hojeISO = todayISO();
   const humorHoje = humorMedioDoDia(hojeISO);
@@ -2066,11 +2091,25 @@ function renderSalarios(){
     if (!porMes[chave]) porMes[chave] = Object.fromEntries(TIPOS_SALARIO.map(t=>[t.key,0]));
     porMes[chave][s.tipo] = (porMes[chave][s.tipo]||0) + (Number(s.valor)||0);
   });
-  const mesesOrdenados = Object.keys(porMes).sort();
+  const totalDoMesSal = (chave)=> porMes[chave] ? Math.round(TIPOS_SALARIO.reduce((a,t)=>a+porMes[chave][t.key],0)) : 0;
 
-  document.getElementById("chartSalarioMes").innerHTML = salarioMesChartSVG(
+  // GRÁFICO 1: somente o ANO ATUAL, mês a mês — de Janeiro até o mês corrente,
+  // nunca mostrando meses futuros. Conforme os meses passam, novas barras
+  // aparecem automaticamente (basta o usuário reabrir/recarregar a aba).
+  const hojeSal = new Date();
+  const anoAtualSal = hojeSal.getFullYear();
+  const mesAtualSal = hojeSal.getMonth()+1; // 1-12
+  const mesesDoAnoAtual = Array.from({length:mesAtualSal}, (_,i)=>i+1);
+  document.getElementById("chartSalarioMesAtual").innerHTML = salarioMesAtualChartSVG(
+    mesesDoAnoAtual.map(m=>MESES_SAL[m-1]),
+    mesesDoAnoAtual.map(m=>totalDoMesSal(`${anoAtualSal}-${String(m).padStart(2,"0")}`))
+  );
+
+  // GRÁFICO 2: histórico geral, todos os anos existentes no sistema (compacto)
+  const mesesOrdenados = Object.keys(porMes).sort();
+  document.getElementById("chartSalarioHistorico").innerHTML = salarioHistoricoChartSVG(
     mesesOrdenados.map(m=>m.slice(5,7)+"/"+m.slice(2,4)),
-    mesesOrdenados.map(m=>Math.round(TIPOS_SALARIO.reduce((a,t)=>a+porMes[m][t.key],0)))
+    mesesOrdenados.map(totalDoMesSal)
   );
   const coresPorTipo = ["#2E86DE","#1FA463","#F7C600","#833AB4","#FD7E14","#17A398","#C2185B"];
   document.getElementById("chartSalarioTipo").innerHTML = salarioTipoChartSVG(

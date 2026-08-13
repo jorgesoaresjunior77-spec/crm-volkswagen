@@ -517,40 +517,72 @@ function competicaoCarrosSVG(itens){
   }).join("");
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">${bars}</svg>`;
 }
-function salarioMesChartSVG(labels, values){
-  if (values.every(v=>v===0) || values.length===0) return `<div class="empty">Sem dados suficientes ainda.</div>`;
-  // Largura escala com a quantidade de meses (mesmo padrão de competicaoCarrosSVG)
-  // e usa largura literal (não 100%) — assim as barras/textos nunca ficam
-  // menores que o legível; com muitos meses o contêiner rola horizontalmente
-  // em vez de espremer tudo.
-  // A largura de cada coluna também escala com o comprimento do MAIOR valor
-  // formatado (ex.: "12.480,00" é bem mais largo que "480,00") — sem isso, com
-  // valores altos e vários meses lado a lado, o texto de uma barra invadia o
-  // texto da barra vizinha.
+function salarioMesAtualChartSVG(labels, values){
+  // GRÁFICO 1 — somente o ano atual, mês a mês (sem meses futuros). Grande e
+  // legível: usa width="100%" (escala com o espaço branco disponível do painel,
+  // que agora ocupa a largura toda) mas mantém height fixo, então o SVG cresce
+  // horizontalmente aproveitando a tela sem esmagar a altura das barras.
+  // A largura de cada coluna escala com o maior texto (valor OU nome do mês)
+  // para os valores nunca ficarem sobrepostos entre barras vizinhas.
+  if (values.length===0 || values.every(v=>v===0)) return `<div class="empty">Sem lançamentos de salário registrados neste ano ainda.</div>`;
   const valoresTxt = values.map(v=>moneyFmt(v).replace("R$","").trim());
   const maiorTxtLen = Math.max(...valoresTxt.map(t=>t.length));
-  const colW = Math.max(70, maiorTxtLen*7.4 + 16);
-  const w=Math.max(600, values.length*colW), h=280, padL=44, padR=16, padT=34, padB=42;
+  const maiorLabelLen = Math.max(...labels.map(l=>l.length));
+  const colW = Math.max(120, maiorTxtLen*10.5 + 26, maiorLabelLen*9.2 + 20);
+  const w = Math.max(760, values.length*colW), h=400, padL=54, padR=20, padT=54, padB=54;
   const max = Math.max(1, ...values);
-  const bw = (w-padL-padR)/values.length - 10;
+  const bw = (w-padL-padR)/values.length - 14;
   const idxMax = values.indexOf(Math.max(...values));
   const cores = ["#E10600","#F7C600","#1FA463","#2E86DE","#833AB4","#FD7E14","#17A398","#C2185B","#6D4C41","#00838F","#E23B4E","#0E7C86"];
   const grid = [0,0.5,1].map(f=>{
     const y = h-padB-f*(h-padT-padB);
     return `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="#E1E3E8" stroke-width="1"/>
-            <text x="${padL-8}" y="${y+3}" font-size="9" text-anchor="end" fill="#9B948C">${Math.round(max*f/1000)}k</text>`;
+            <text x="${padL-10}" y="${y+4}" font-size="11.5" text-anchor="end" fill="#9B948C">${Math.round(max*f/1000)}k</text>`;
   }).join("");
   const bars = values.map((v,i)=>{
     const bh = Math.max(2,(v/max)*(h-padT-padB));
-    const x = padL + i*(bw+10);
+    const x = padL + i*(bw+14);
     const y = h-padB-bh;
     const cor = cores[i%cores.length];
     const destaque = i===idxMax && v>0;
     return `<g class="viz-glow">
-      <rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="6" fill="${cor}" ${destaque?'stroke="#F7C600" stroke-width="2.5"':''}/>
-      ${destaque?`<text x="${x+bw/2}" y="${y-20}" font-size="13" text-anchor="middle">🏆</text>`:""}
-      <text x="${x+bw/2}" y="${y-6}" font-size="10.5" text-anchor="middle" fill="${destaque?'#B8790F':'#48474F'}" font-weight="800">${valoresTxt[i]}</text>
-      <text x="${x+bw/2}" y="${h-padB+16}" font-size="9.5" text-anchor="middle" fill="#8a8f98" font-weight="700">${labels[i]}</text>
+      <rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="8" fill="${cor}" ${destaque?'stroke="#F7C600" stroke-width="3"':''}/>
+      ${destaque?`<text x="${x+bw/2}" y="${y-30}" font-size="17" text-anchor="middle">🏆</text>`:""}
+      <text x="${x+bw/2}" y="${y-10}" font-size="14.5" text-anchor="middle" fill="${destaque?'#B8790F':'#3A3A3A'}" font-weight="800">${valoresTxt[i]}</text>
+      <text x="${x+bw/2}" y="${h-padB+24}" font-size="13" text-anchor="middle" fill="#6b7280" font-weight="700">${labels[i]}</text>
+    </g>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">${grid}${bars}</svg>`;
+}
+function salarioHistoricoChartSVG(labels, values){
+  // GRÁFICO 2 — histórico geral (todos os anos), compacto: só uma visão geral,
+  // não precisa de destaque nem de muito espaço. Largura literal (não 100%)
+  // dentro de um contêiner com overflow-x:auto, pra rolar quando houver muitos
+  // meses acumulados em vários anos, em vez de espremer tudo.
+  if (values.every(v=>v===0) || values.length===0) return `<div class="empty">Sem dados suficientes ainda.</div>`;
+  const valoresTxt = values.map(v=>moneyFmt(v).replace("R$","").trim());
+  const maiorTxtLen = Math.max(...valoresTxt.map(t=>t.length));
+  const colW = Math.max(52, maiorTxtLen*5.6 + 12);
+  const w=Math.max(420, values.length*colW), h=170, padL=34, padR=10, padT=24, padB=28;
+  const max = Math.max(1, ...values);
+  const bw = (w-padL-padR)/values.length - 7;
+  const idxMax = values.indexOf(Math.max(...values));
+  const cores = ["#E10600","#F7C600","#1FA463","#2E86DE","#833AB4","#FD7E14","#17A398","#C2185B","#6D4C41","#00838F","#E23B4E","#0E7C86"];
+  const grid = [0,1].map(f=>{
+    const y = h-padB-f*(h-padT-padB);
+    return `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="#E1E3E8" stroke-width="1"/>
+            <text x="${padL-6}" y="${y+3}" font-size="7.5" text-anchor="end" fill="#9B948C">${Math.round(max*f/1000)}k</text>`;
+  }).join("");
+  const bars = values.map((v,i)=>{
+    const bh = Math.max(1,(v/max)*(h-padT-padB));
+    const x = padL + i*(bw+7);
+    const y = h-padB-bh;
+    const cor = cores[i%cores.length];
+    const destaque = i===idxMax && v>0;
+    return `<g class="viz-glow">
+      <rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${cor}" ${destaque?'stroke="#F7C600" stroke-width="1.5"':''}/>
+      <text x="${x+bw/2}" y="${y-4}" font-size="7.5" text-anchor="middle" fill="${destaque?'#B8790F':'#48474F'}" font-weight="700">${valoresTxt[i]}</text>
+      <text x="${x+bw/2}" y="${h-padB+12}" font-size="7" text-anchor="middle" fill="#8a8f98" font-weight="600">${labels[i]}</text>
     </g>`;
   }).join("");
   return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${grid}${bars}</svg>`;

@@ -1215,6 +1215,11 @@ document.getElementById("formPonto").addEventListener("submit", e=>{
 });
 
 renderAll(); // estado padrão inicial, enquanto verifica sessão/carrega do banco
+
+// Frase do dia: reavalia a cada minuto pra trocar sozinha quando o período
+// do dia mudar (meio-dia / meia-noite), sem o usuário precisar atualizar a página.
+setInterval(renderMensagemDia, 60000);
+
 if (iniciarClienteNuvem()){
   verificarSessaoLogin();
 } else {
