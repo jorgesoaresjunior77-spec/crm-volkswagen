@@ -154,10 +154,13 @@ function propostaCardHTML(p){
     </div>
     <div class="prop-card-footer">
       <div class="prop-vendedor-info">
-        ${ehAdminLogado ? `<img src="assets/vendedor-admin-foto.png" alt="${vendedorInfo.nome}" class="prop-vendedor-foto">` : ""}
+        ${ehAdminLogado ? `<img src="assets/vendedor-admin-foto.png" alt="Júnior" class="prop-vendedor-foto">` : ""}
         <div>
-          <div class="prop-vendedor-nome">${vendedorInfo.nome}</div>
-          <div class="prop-vendedor-whats">${vendedorInfo.telefone && vendedorInfo.telefone !== "—" ? "💬 " + vendedorInfo.telefone : ""}</div>
+          <div class="prop-vendedor-nome">${ehAdminLogado ? "JUNIOR" : vendedorInfo.nome}</div>
+          ${ehAdminLogado ? `<div class="prop-vendedor-cargo">Consultor de Vendas Volkswagen Motomecânica</div>` : ""}
+          <div class="prop-vendedor-whats">${ehAdminLogado
+            ? `<svg class="prop-whats-icon" viewBox="0 0 32 32" aria-hidden="true"><path fill="#25D366" d="M16 .2C7.3.2.2 7.3.2 16c0 2.8.8 5.5 2.1 7.9L.2 31.8l8.1-2.1c2.3 1.2 4.9 1.9 7.6 1.9 8.7 0 15.8-7.1 15.8-15.8S24.7.2 16 .2zm0 28.8c-2.4 0-4.7-.6-6.8-1.8l-.5-.3-4.8 1.3 1.3-4.7-.3-.5C3.5 21 2.9 18.5 2.9 16 2.9 8.8 8.8 2.9 16 2.9S29.1 8.8 29.1 16 23.2 29 16 29z"/><path fill="#25D366" d="M23 19.1c-.4-.2-2.3-1.1-2.6-1.3-.4-.1-.6-.2-.9.2-.3.4-1 1.3-1.2 1.5-.2.2-.4.3-.8.1-.4-.2-1.6-.6-3.1-1.9-1.1-1-1.9-2.3-2.1-2.6-.2-.4 0-.6.2-.8.2-.2.4-.4.5-.6.2-.2.2-.4.4-.6.1-.2.1-.4 0-.6-.1-.2-.9-2.2-1.2-3-.3-.8-.6-.7-.9-.7h-.7c-.2 0-.6.1-.9.4-.3.4-1.2 1.2-1.2 2.9s1.3 3.4 1.4 3.6c.2.2 2.6 4 6.3 5.5.9.4 1.6.6 2.1.8.9.3 1.7.2 2.3.1.7-.1 2.3-.9 2.6-1.8.3-.9.3-1.7.2-1.8-.1-.2-.3-.3-.7-.4z"/></svg> (51) 99650-9660`
+            : (vendedorInfo.telefone && vendedorInfo.telefone !== "—" ? "💬 " + vendedorInfo.telefone : "")}</div>
         </div>
       </div>
       ${ehAdminLogado ? `<div class="prop-qr-wrap">
