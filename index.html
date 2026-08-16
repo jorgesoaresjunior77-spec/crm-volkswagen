@@ -1680,7 +1680,9 @@
 <script src="js/propostas.js"></script>
 <script src="js/estoque.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/crm.js"></script>
-<script src="js/app.js"></script>
+<!-- "?v=" evita que o navegador/CDN sirva uma cópia antiga em cache depois de um deploy;
+     mude esse valor sempre que crm.js ou app.js forem alterados. -->
+<script src="js/crm.js?v=20260816-1"></script>
+<script src="js/app.js?v=20260816-1"></script>
 </body>
 </html>
