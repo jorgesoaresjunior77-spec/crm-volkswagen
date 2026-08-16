@@ -351,6 +351,10 @@ document.getElementById("g-fat").addEventListener("change", e=>{
 });
 moedaInputG(document.getElementById("g-preco"), "preco");
 moedaInputG(document.getElementById("g-usado"), "usado");
+document.getElementById("g-marca-troca").addEventListener("change", e=>{
+  state.gerente.est.marcaTroca = e.target.value;
+  calcularGerente(); persist();
+});
 document.getElementById("g-ger").addEventListener("input", e=>{
   const v = e.target.value.replace(/[^\d,\.]/g,"").replace(".",",");
   e.target.value = v;
@@ -670,9 +674,9 @@ document.getElementById("gerenteArquivoJson").addEventListener("change", async e
     state.gerente.politica = {
       nome: (p.nome || f.name.replace(/\.json$/i,"")),
       dataCarregada: todayISO(),
-      regras: regras.map(x=>Object.assign({m:"",v:"",c:"",am:[],op:null,de:null,ate:null,nf:0,ti:0,bv:0,rede:0,tot:0,tx:"",obs:""}, x)),
+      regras: regras.map(x=>Object.assign({m:"",v:"",c:"",am:[],op:null,de:null,ate:null,nf:0,ti:0,bv:0,rede:0,tot:0,tx:"",obs:"",marca:null}, x)),
     };
-    state.gerente.est = {modelo:"", versao:"", ano:"", fat:"", dias:null, preco:0, usado:0, gerPct:state.gerente.est.gerPct||3, op:null};
+    state.gerente.est = {modelo:"", versao:"", ano:"", fat:"", dias:null, preco:0, usado:0, gerPct:state.gerente.est.gerPct||3, op:null, marcaTroca:""};
     persist();
     renderGerentePoliticaAtualBox();
     renderGerenteForm();
