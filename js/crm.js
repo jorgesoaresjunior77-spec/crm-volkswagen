@@ -3397,7 +3397,7 @@ const DOC_CAMPOS_SIMPLES = {
   procuracao: ["proc-nome","proc-cpf","proc-ci","proc-veiculo","proc-chassi","proc-placas","proc-data","proc-endereco","proc-tel","proc-email"],
   autorizacao: ["aut-nome","aut-rg","aut-cpf","aut-veiculo","aut-marca","aut-anofab","aut-anomod","aut-cor","aut-chassi","aut-placa","aut-terc-nome","aut-terc-rg","aut-terc-cpf","aut-data"],
   retirada: ["ret-nome","ret-rg","ret-cpf","ret-veiculo","ret-chassi","ret-data"],
-  pedidovd: ["vd-nome","vd-cpf","vd-cnpjmatriz","vd-ie","vd-uf","vd-qtd","vd-modelo","vd-cor","vd-opcionais","vd-desconto","vd-preco","vd-pep-motivo","vd-comp1-nome","vd-comp1-cpf","vd-comp2-nome","vd-comp2-cpf","vd-test-nome","vd-test-cpf","vd-vendedor-nome","vd-vendedor-cpf"],
+  pedidovd: ["vd-nome","vd-cpf","vd-cnpjmatriz","vd-ie","vd-uf","vd-modelo","vd-cor","vd-opcionais","vd-desconto","vd-preco","vd-pep-motivo","vd-comp1-nome","vd-comp1-cpf","vd-comp2-nome","vd-comp2-cpf","vd-test-nome","vd-test-cpf","vd-vendedor-nome","vd-vendedor-cpf"],
 };
 function salvarCamposDocumentos(){
   state.documentos = state.documentos || {};
@@ -3465,6 +3465,154 @@ function abrirJanelaImpressaoDoc(titulo, corpoHtml){
       .chk-list div{ break-inside:avoid; margin-bottom:3px; }
     </style>
   </head><body>${corpoHtml}</body></html>`;
+  const w = window.open("", "_blank");
+  if (!w){ alert("O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente novamente."); return; }
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>{ w.focus(); w.print(); }, 350);
+}
+
+// Logo Volkswagen extraído do arquivo "PEDIDO DE COMPRA VD.xlsx" (xl/media/image1.png),
+// usado só na impressão do Pedido de Compra VD, pra reproduzir o cabeçalho do modelo original.
+const LOGO_VW_PEDIDO_VD_B64 = "iVBORw0KGgoAAAANSUhEUgAAABsAAAAdCAMAAAEbVNfsAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAALEUExURf////39/fz8/fz8/P7+/sDH1HWFoUZbgDJJcjBIcT9Ve2Z4lqy1xvP09pikuC9IchAsXEdcgXuKpJmkuJynuoWTq1Rniho1Yx45Z3iHovLz9eDj6TRMdRMuXgAfUzBHcG19mQAgVxYxYBgzYrrBz8/U3QwpW1ZqjPT191NmiAAhWba+zPv7/Pr6++Xn7QonWBkzYff3+YuYrwAfVJ6pvAYjVnSEoMLI1ENYfIWSqwAiW4aTq663xwAfVS5Gb1lsjTdNddDV3vX1+AwpWunr7/n5+gkmV+Pl652ou9ba4q22xl5wj6CqvQAhWmt7mAsnWFZpiiU+aQAgWFttjSI7ZwclVytDbAMhVtre5QEeUdrd5bnAzhArWh85ZQUjV5SgtQAiXIqXrs3S3FFkhvj4+g0pWRw2ZHqJo2Z3lVptjbK6yQAhW1xujvDx9BEtXSA6ZjlPdgEgVsXL13GBnZumuSpCbDtReIGPqAQiVtfb43SDnjNKcQMiVuPm687T3RItXJeit+nr8HmIo3eHpMrQ2p6ovFlrixAsWufp7ilBa/b2+Njc5Ors8HyLpXqKpszR3CM8ZwQiV9XZ4tnc5OXn7DdOdYWSql1vjnmIojdNdPv7+56ou8jO2F9xkFJlh/Lz9hUwXx44ZQIhVsvQ25ijuKqzxBUwXlpsjZumuoiVrMzR21hri0hdgWJ0kwsnV6+3xyE6ZgMhVTVMc+Ll6ihAagUiVdvf5gIfUMjO2ZqluQAgVic/alZpiV9xkTNKcgIgUxo0YQAeU9TY4bzD0MfN2ERZfYORqdPX4AEfU4yZr4WTrBk0YqewwhAsXbO7ywUjVnWFoMDH0xUxYTdPeMPK1ujq7uvs8Nzf5ltukAclWJKetGd5mA0pW3eGoqy1xcvR27W9zEZbgUZcgo+cskpfgylCbB44ZD9VfHqJpNPY4Pb3+QAAAJ0mJewAAADsdFJOU/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AtmusLwAAAAlwSFlzAAAOxAAADsQBlSsOGwAAAZFJREFUKFOlUjtqw0AQfaUOsJfQDVSo8RFEwCDU5g4GgUGdOjVqDWFRpSJqA9Mtbl3ZYV0YAsY+SN6M5ATSJJAHmh3N2/kvFlz4reAByWZDr8KfgZ0qgrrSfyp+AmqPUs0/kQBHHg5y4E2MPdaIwN0jMDQR0JtjnS9pvlEnp3xR6TucVOZmmRjKjRSYagrHKOgG5VmK5gnJ1p8FkTYg3+DAm2r/A96z4vKy6NuJ9UM0KH9qjbAZNZklqVILeQX2nsORIeU82G1i5SgVaC5AMnak+j7i1YpMdpSOFz440ADhVHUIzCMrtILKZl2iBWJfaYvEJTkMoxjzTzSFXDvnxrQ9do9WDYOkSEX3iigtxqA1zijYHLDW/PEoz9SdcJGKI70ULQ1e+ECYIbzZeUmrmYyTT8S2cZPaFaoUDi7MZNet9Lzxt7eoyajxlaxD0B0ohcEWkatUspHbiubGgmScLMF3qNm9+jopLES6Nor+Jftp5ve8kSe+75J5HthPp2HpKJ5TaWb1C3G8F633WWeN/QLgEwvqq/0ocev/AAAAAElFTkSuQmCC";
+
+const CLAUSULAS_GERAIS_PEDIDO_VD = [
+  "O PREÇO DEFINITIVO será determinado na data do faturamento conforme a Tabela de Preços Público Sugerida em vigor.",
+  "Quando o CONCESSIONÁRIO confirmar ao COMPRADOR ESPECIAL que o PEDIDO por ele formulado foi aprovado pela VOLKSWAGEN, o DESCONTO fixado no QUADRO Nº 2 será: a) mantido mesmo se houver redução do percentual de desconto promovida pela VOLKSWAGEN, na política de venda a COMPRADOR ESPECIAL; b) aumentado sempre que houver aumento do percentual de desconto promovido pela VOLKSWAGEN, na política de venda a COMPRADOR ESPECIAL, relativamente a veículo que ainda não tenha sido faturado.",
+  "Não serão estendidas ao COMPRADOR ESPECIAL promoções de varejo praticadas pela VOLKSWAGEN e/ou pelo CONCESSIONÁRIO.",
+  "O pagamento deverá ser feito exclusivamente e diretamente à VOLKSWAGEN. O pagamento feito a qualquer outra pessoa física ou jurídica, inclusive ao próprio CONCESSIONÁRIO, não será reconhecido como válido pela VOLKSWAGEN. 4.1. O COMPRADOR ESPECIAL, neste ato, expressamente autoriza a VOLKSWAGEN, em caráter inequívoco, irrevogável e irretratável, a qualquer tempo, independente da forma e ao seu exclusivo critério, a realizar a cessão dos direitos creditórios decorrentes deste PEDIDO a quaisquer terceiros, o que inclui, mas não se limita a, instituições financeiras ou outras instituições autorizadas a funcionar pelo Banco Central do Brasil, fundos de investimentos em direitos creditórios (\"FIDCs\") e sociedades de fomento mercantil (factorings), nos termos dos artigos 286 e seguintes da Lei nº10.406, de 10 de janeiro de 2002 (Código Civil Brasileiro). 4.1.1. Não obstante a cessão dos direitos creditórios, a VOLKSWAGEN poderá, a seu exclusivo critério, permanecer como a única responsável pela cobrança e recebimento dos valores devidos pelo COMPRADOR ESPECIAL, hipótese em que os pagamentos a eles relativos continuarão sendo realizados pelo COMPRADOR ESPECIAL exclusivamente à VOLKSWAGEN, por meio da emissão de boletos bancários, nos termos deste PEDIDO.",
+  "O pagamento feito em até 2 (dois) dias úteis após a data de vencimento somente será aceito com multa em valor correspondente a 2% (dois por cento) sobre o valor da operação consignado no boleto de pagamento.",
+  "A falta de pagamento tempestivo ou a desistência imotivada pelo COMPRADOR ESPECIAL determinará o cancelamento da operação, sem necessidade de qualquer notificação especial. Neste caso, se já houver ocorrido o faturamento, sempre será devido pelo COMPRADOR ESPECIAL ao CONCESSIONÁRIO a multa de R$ 338,00 (trezentos e trinta e oito reais), mais o frete de retorno para o estabelecimento da VOLKSWAGEN, quando for o caso.",
+  "O COMPRADOR ESPECIAL poderá cancelar a operação por justa causa, mediante comunicação por escrito à VOLKSWAGEN através do CONCESSIONÁRIO, nos seguintes casos: a) Não fornecimento do veículo na exata especificação encomendada. b) Nas opções de compra por meio de CDC ou LEASING, se o crédito não vier a ser aprovado pela instituição financeira.",
+  "A entrega do veículo ocorrerá somente após o preço estar totalmente pago, e será feita exclusivamente pelo CONCESSIONÁRIO que realizou a intermediação, podendo, em casos especiais e previamente ajustados, ser feita por outro concessionário.",
+  "Por se tratar de negociação que envolve desconto especial e por não se tratar de promoção ou de ação de vendas dirigida ao mercado em geral, não poderá haver transferência de veículo a terceiros antes de decorrido o prazo de 180 (cento e oitenta) dias contados da data do faturamento. O descumprimento desta condição acarretará o descredenciamento do COMPRADOR ESPECIAL no sistema.",
+  "O pedido não será aceito se constar no Cadastro Nacional de Atividade Econômica (CNAE) do Comprador Especial o comércio de veículos novos e/ou usados, seja como atividade primária ou secundária. Haverá exceção somente para concessionários autorizados de veículos automotores, caminhões e ônibus, bem como de implementos agrícolas, após análise e autorização prévia por parte da Volkswagen do Brasil.",
+  "Na ocorrência de caso fortuito ou força maior, como tal entendido qualquer fato necessário cujo efeito não tenha sido possível evitar ou impedir e enquanto esse efeito perdurar, a VOLKSWAGEN e o CONCESSIONÁRIO não responderão pelo não cumprimento da operação.",
+  "O Comprador confirma e reconhece que o(s) veículo(s) descrito(s) e pormenorizado(s) no quadro nº 2 acima, passam a ser de sua propriedade e quando da efetiva emissão de faturamento e embarque, mesmo que os referidos veículos sejam mantidos por um período determinado no pátio de distribuição das transportadoras responsáveis. As Condições Gerais da Operação em nada alteram as condições de pagamento e demais cláusulas comerciais contratadas e praticadas, as quais permanecem vigentes. Sem prejuízo e independente da modalidade de frete contratada (ex. CIF), todas as condições de seguro contratadas para operação de transporte seguem vigentes e inalteradas.",
+  "A tolerância da VOLKSWAGEN, ou do CONCESSIONÁRIO, ou do COMPRADOR ESPECIAL, em relação ao não cumprimento de qualquer obrigação prevista neste documento, não importará em novação ou em renúncia a direitos e faculdades, os quais poderão ser exigidos em qualquer outro momento ou situação.",
+  "É competente o foro da Comarca de São Bernardo do Campo, Estado de São Paulo, com expressa exclusão de qualquer outro, por mais privilegiado que seja.",
+];
+
+// Reproduz na impressão, o mais fielmente possível, o layout do arquivo "PEDIDO DE COMPRA VD.xlsx"
+// (aba "FIIT"): mesmas seções, mesma ordem, mesmos rótulos e texto legal completo (14 cláusulas +
+// condições PcD), mesmo cabeçalho com o logo, formato A4 retrato em página única. O preenchimento
+// dos dados continua vindo exatamente de state.documentos.pedidovd, como já era antes — só a
+// aparência impressa mudou. Função isolada (não usa abrirJanelaImpressaoDoc) pra não afetar a
+// impressão dos outros documentos (procuração, retirada de veículo etc.).
+function imprimirDocPedidoVDFielExcel(d){
+  const hojeFmt = new Date().toLocaleDateString("pt-BR");
+  const opcoesPag = ["À VISTA","LEASING","CDC","CONSÓRCIO"];
+  const radio = (marcado)=> `<span class="radio${marcado?" sel":""}"></span>`;
+  const check = (marcado)=> `<span class="check">${marcado?"X":""}</span>`;
+
+  // Campos do carro: Quantidade foi removida (não existe mais nem como input no
+  // formulário). Modelo/Cor/Opcionais/Desconto/Preço continuam vindo do CRM.
+  const linhasVeiculo = [
+    [ d["vd-modelo"]||"", d["vd-cor"]||"", d["vd-opcionais"]||"", d["vd-desconto"]||"", d["vd-preco"]||"" ],
+    ["","","","",""],
+    ["","","","",""],
+    ["","","","",""],
+  ];
+
+  const clausulasHtml = CLAUSULAS_GERAIS_PEDIDO_VD.map((t,i)=>`<p><b>${i+1}-</b> ${t}</p>`).join("");
+
+  const corpo = `
+  <div class="cab">
+    <img src="data:image/png;base64,${LOGO_VW_PEDIDO_VD_B64}" alt="VW">
+    <h1>Pedido de Compra - Comprador Especial</h1>
+    <div class="cab-meta">Local: <b>Lajeado</b><br>Data: <b>${hojeFmt}</b></div>
+  </div>
+  <div class="intro">O COMPRADOR ESPECIAL, através do concessionário, ambos abaixo qualificados</div>
+
+  <div class="tit-quadro">Quadro Nº1 - Qualificações das Partes</div>
+  <table class="doc">
+    <tr><th style="width:40%;">Comprador Especial</th><th style="width:30%;">Concessionário de venda</th><th style="width:30%;">Condição de entrega</th></tr>
+    <tr>
+      <td><span class="lbl">Nome / Razão Social</span><span class="val campo-vazio">&nbsp;</span></td>
+      <td><span class="lbl">DN - Dealer Number</span><span class="val">83</span><span class="lbl">Nome / Razão Social</span><span class="val">Motomecânica</span></td>
+      <td><span class="lbl">DN - Dealer Number</span><span class="val">83</span><span class="lbl">Nome / Razão Social</span><span class="val">Motomecânica</span></td>
+    </tr>
+    <tr>
+      <td><span class="lbl">CPF / CNPJ Faturamento</span><span class="val campo-vazio">&nbsp;</span></td>
+      <td colspan="2"><span class="lbl">CNPJ Matriz (obrigatório*)</span><span class="val campo-vazio">&nbsp;</span></td>
+    </tr>
+    <tr>
+      <td><span class="lbl">Inscrição Estadual</span><span class="val campo-vazio">&nbsp;</span></td>
+      <td colspan="2"><span class="lbl">UF</span><span class="val campo-vazio">&nbsp;</span></td>
+    </tr>
+  </table>
+  <div class="nota">*Preenchimento obrigatório sempre que o faturamento ocorrer através de filial.</div>
+
+  <div class="intro">EFETUA à VOLKSWAGEN DO BRASIL INDÚSTRIA DE VEÍCULOS AUTOMOTORES LTDA. (VOLKSWAGEN), com sede social na Estrada Marginal da Via Anchieta, km. 23,5, na cidade de São Bernardo do Campo, Estado de São Paulo, CNPJ nº 59.104.422-0001-50, a seguinte encomenda:</div>
+
+  <div class="tit-quadro">Quadro Nº2 - Especificações</div>
+  <table class="doc tabela-veiculo">
+    <tr><th>Modelo</th><th>Cor</th><th>Opcionais</th><th>Desconto</th><th>Preço Referência (Unitário)</th></tr>
+    ${linhasVeiculo.map(l=>`<tr>${l.map(v=>`<td>${v}</td>`).join("")}</tr>`).join("")}
+  </table>
+
+  <div class="pagamento"><b>Forma de pagamento</b>
+    ${opcoesPag.map(op=>`<span>${radio(op===(d.pagamento||"À VISTA"))} ${op}</span>`).join("")}
+  </div>
+
+  <div class="legal-title">Condições Gerais da Operação</div>
+  <div class="legal-text">${clausulasHtml}
+    <p><b>Condições específicas para o segmento de vendas à PcD - Pessoas com Deficiência</b></p>
+    <p>Diante da legislação vigente de comercialização de veículos para PcD – Pessoas com Deficiência, em caso de aumento do preço público que ultrapasse o limite para concessão do benefício de isenção do ICMS ou mesmo em caso de alteração da legislação vigente que concede o benefício da isenção do ICMS na data do faturamento, o COMPRADOR ESPECIAL (PcD) optará pela: a) Alteração do veículo de forma a se enquadrar nos limites estabelecidos pela legislação estadual; b) Aquisição do veículo sem a isenção de ICMS; ou c) Cancelamento do pedido sem qualquer ônus.</p>
+    <p>Nota: As cláusulas 7 item b) para a condição de Leasing e 9 não se aplicam ao segmento de Pessoa com Deficiência - PcD e Taxista com Isenção de impostos, uma vez que obedecerá às exigências legais específicas.</p>
+  </div>
+
+  <div class="declaracoes">
+    <div class="linha">Existe cláusula no contrato social da empresa que obriga a assinatura em conjunto dos sócios administradores para compra de imobilizados? ${check(d.clausula==="SIM")} Sim &nbsp; ${check(d.clausula!=="SIM")} Não</div>
+    <div class="linha">Em atendimento a Lei 12.683/2012 sobre Prevenção à Lavagem de Dinheiro, você se auto declara uma Pessoa Exposta Políticamente? ${check(d.pep==="SIM")} Sim &nbsp; ${check(d.pep!=="SIM")} Não</div>
+    <div class="linha nota">Consideram-se pessoas expostas politicamente os agentes públicos que desempenham ou tenham desempenhado, nos últimos cinco anos, no Brasil ou em países, territórios e dependências estrangeiras, cargos, empregos ou funções públicas relevantes, assim como seus representantes, familiares e estreitos colaboradores. Se "SIM", por favor, descreva motivo pelo qual o Sr. (a) se auto declara uma pessoa exposta politicamente.
+    ${d.pep==="SIM" && d["vd-pep-motivo"] ? "<br><b>Motivo:</b> "+d["vd-pep-motivo"] : ""}</div>
+  </div>
+
+  <div class="assinaturas">
+    <div class="assinatura-box"><div class="assinatura-linha">CLIENTE</div></div>
+    <div class="assinatura-box"><div class="assinatura-linha">CLIENTE</div></div>
+    <div class="assinatura-box"><div class="assinatura-linha">CLIENTE</div></div>
+    <div class="assinatura-box"><div class="assinatura-linha">Responsável pela Venda - Concessionário<br>Nome: TAMIRES STEFANI STEIN<br>CPF: 051.276.480-83</div></div>
+  </div>`;
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Pedido de Compra VD</title>
+    <style>
+      @page{ size:A4; margin:9mm; }
+      *{ box-sizing:border-box; }
+      html, body{ width:100%; max-width:100%; }
+      body{ font-family:Arial, Helvetica, sans-serif; color:#000; margin:0; font-size:8.3px; line-height:1.25; }
+      .cab{ display:flex; align-items:center; gap:8px; border-bottom:1.5px solid #000; padding-bottom:5px; margin-bottom:6px; }
+      .cab img{ width:22px; height:24px; flex:none; }
+      .cab h1{ flex:1; min-width:0; text-align:center; font-size:12.5px; margin:0; text-transform:uppercase; letter-spacing:.3px; }
+      .cab-meta{ flex:none; font-size:8px; text-align:right; }
+      .intro{ font-size:8.3px; text-align:justify; margin-bottom:6px; word-break:break-word; }
+      .tit-quadro{ background:#000; color:#fff; font-size:9px; font-weight:700; padding:2px 6px; margin:7px 0 3px; text-transform:uppercase; }
+      table.doc{ width:100%; max-width:100%; table-layout:fixed; border-collapse:collapse; margin-bottom:3px; }
+      table.doc td, table.doc th{ border:1px solid #000; padding:3px 5px; text-align:left; vertical-align:top; word-break:break-word; overflow-wrap:break-word; }
+      table.doc th{ background:#eee; font-size:7px; text-transform:uppercase; font-weight:700; }
+      table.doc .lbl{ display:block; font-size:6.3px; text-transform:uppercase; color:#333; margin-top:2px; }
+      table.doc .lbl:first-child{ margin-top:0; }
+      table.doc .val{ display:block; font-weight:700; font-size:8.3px; margin-bottom:1px; min-height:10px; }
+      table.doc .campo-vazio{ border-bottom:1px solid #000; }
+      table.tabela-veiculo td, table.tabela-veiculo th{ width:20%; }
+      .nota{ font-size:7px; color:#555; margin:0 0 8px; }
+      .pagamento{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:2px 0 8px; font-size:8.3px; }
+      .pagamento span{ display:inline-flex; align-items:center; gap:3px; }
+      .radio{ display:inline-block; width:7px; height:7px; border:1.2px solid #000; border-radius:50%; flex:none; }
+      .radio.sel{ background:#000; }
+      .legal-title{ background:#000; color:#fff; font-size:9px; font-weight:700; padding:2px 6px; margin:8px 0 3px; text-transform:uppercase; }
+      .legal-text{ font-size:6.1px; line-height:1.35; text-align:justify; word-break:break-word; }
+      .legal-text p{ margin:0 0 3px; }
+      .declaracoes{ margin-top:8px; }
+      .declaracoes .linha{ font-size:7.6px; text-align:justify; margin-bottom:4px; word-break:break-word; }
+      .declaracoes .nota{ font-size:6.4px; color:#444; }
+      .check{ display:inline-flex; align-items:center; justify-content:center; width:8px; height:8px; border:1.1px solid #000; font-size:6.5px; font-weight:700; line-height:1; vertical-align:middle; flex:none; }
+      .assinaturas{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-top:16px; }
+      .assinatura-box{ text-align:center; font-size:7.4px; min-width:0; }
+      .assinatura-linha{ border-top:1px solid #000; margin-top:24px; padding-top:3px; word-break:break-word; }
+    </style>
+  </head><body>${corpo}</body></html>`;
   const w = window.open("", "_blank");
   if (!w){ alert("O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente novamente."); return; }
   w.document.write(html);

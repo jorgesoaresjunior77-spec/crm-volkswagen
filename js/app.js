@@ -560,64 +560,7 @@ document.getElementById("btnImprimirDocRetirada").addEventListener("click", ()=>
 
 document.getElementById("btnImprimirDocPedidoVD").addEventListener("click", ()=>{
   salvarCamposDocumentos();
-  const d = state.documentos.pedidovd || {};
-  const hojeFmt = new Date().toLocaleDateString("pt-BR");
-  const opcoesPag = ["À VISTA","LEASING","CDC","CONSÓRCIO"];
-  const corpo = `
-    <h1>Pedido de Compra — Comprador Especial</h1>
-    <h2>Lajeado — ${hojeFmt}</h2>
-    <div class="linha" style="font-size:11.5px;">O COMPRADOR ESPECIAL, através do concessionário, ambos abaixo qualificados</div>
-
-    <div class="tit">Quadro nº1 — Qualificações das Partes</div>
-    <table>
-      <tr><th>Comprador Especial</th><th>Concessionário de Venda</th><th>Condição de Entrega</th></tr>
-      <tr>
-        <td>Nome/Razão Social:<br><b>${d["vd-nome"]||""}</b></td>
-        <td>DN — Dealer Number: <b>${d["vd-dn"]||"83"}</b><br>Nome/Razão Social: <b>Motomecânica</b></td>
-        <td>DN — Dealer Number: <b>83</b><br>Nome/Razão Social: <b>Motomecânica</b></td>
-      </tr>
-      <tr>
-        <td colspan="3">
-          CPF/CNPJ Faturamento: <b>${d["vd-cpf"]||""}</b> &nbsp;·&nbsp;
-          CNPJ Matriz*: <b>${d["vd-cnpjmatriz"]||"—"}</b> &nbsp;·&nbsp;
-          Inscrição Estadual: <b>${d["vd-ie"]||"—"}</b> &nbsp;·&nbsp;
-          UF: <b>${d["vd-uf"]||"RS"}</b>
-        </td>
-      </tr>
-    </table>
-    <div style="font-size:9.5px;color:#666;margin:-6px 0 12px;">*Preenchimento obrigatório sempre que o faturamento ocorrer através de filial.</div>
-
-    <div class="linha" style="font-size:11px;text-align:justify;">EFETUA à VOLKSWAGEN DO BRASIL INDÚSTRIA DE VEÍCULOS AUTOMOTORES LTDA. (VOLKSWAGEN),
-    com sede social na Estrada Marginal da Via Anchieta, km. 23,5, na cidade de São Bernardo do Campo, Estado de São Paulo,
-    CNPJ nº 59.104.422-0001-50, a seguinte encomenda:</div>
-
-    <div class="tit">Quadro nº2 — Especificações</div>
-    <table>
-      <tr><th>Quantidade</th><th>Modelo</th><th>Cor</th><th>Opcionais</th><th>Desconto</th><th>Preço Referência (Unitário)</th></tr>
-      <tr><td>${d["vd-qtd"]||"1"}</td><td>${d["vd-modelo"]||""}</td><td>${d["vd-cor"]||""}</td><td>${d["vd-opcionais"]||"—"}</td><td>${d["vd-desconto"]||"0,00"}</td><td>${d["vd-preco"]||"0,00"}</td></tr>
-    </table>
-
-    <div class="linha"><b>Forma de pagamento:</b>
-      ${opcoesPag.map(op=>`${op===(d.pagamento||"À VISTA")?"☑":"☐"} ${op}`).join(" &nbsp;&nbsp; ")}
-    </div>
-
-    <div class="tit">Condições Gerais da Operação</div>
-    <div class="linha" style="font-size:11px;text-align:justify;">Existe cláusula no contrato social da empresa que obriga a assinatura em conjunto dos sócios administradores
-    para compra de imobilizados? <b>${d.clausula==="SIM"?"☑ Sim &nbsp; ☐ Não":"☐ Sim &nbsp; ☑ Não"}</b></div>
-    <div class="linha" style="font-size:11px;text-align:justify;">Em atendimento a Lei 12.683/2012 sobre Prevenção à Lavagem de Dinheiro, você se auto declara uma
-    Pessoa Exposta Politicamente? <b>${d.pep==="SIM"?"☑ Sim &nbsp; ☐ Não":"☐ Sim &nbsp; ☑ Não"}</b></div>
-    <div class="linha" style="font-size:10px;color:#555;text-align:justify;">Consideram-se pessoas expostas politicamente os agentes públicos que desempenham ou tenham desempenhado,
-    nos últimos cinco anos, no Brasil ou em países, territórios e dependências estrangeiras, cargos, empregos ou funções públicas relevantes, assim como seus
-    representantes, familiares e estreitos colaboradores. Se "SIM", por favor, descreva motivo pelo qual o Sr.(a) se auto declara uma pessoa exposta politicamente.
-    ${d.pep==="SIM" && d["vd-pep-motivo"] ? "<br><b>Motivo:</b> "+d["vd-pep-motivo"] : ""}</div>
-
-    <div class="assinaturas">
-      <div class="assinatura-box"><div class="assinatura-linha">Assinatura do Comprador<br>Nome: ${d["vd-comp1-nome"]||""}<br>CPF: ${d["vd-comp1-cpf"]||""}</div></div>
-      <div class="assinatura-box"><div class="assinatura-linha">Assinatura do Comprador<br>Nome: ${d["vd-comp2-nome"]||""}<br>CPF: ${d["vd-comp2-cpf"]||""}</div></div>
-      <div class="assinatura-box"><div class="assinatura-linha">Testemunha (opcional)<br>Nome: ${d["vd-test-nome"]||""}<br>CPF: ${d["vd-test-cpf"]||""}</div></div>
-      <div class="assinatura-box"><div class="assinatura-linha">Responsável pela Venda — Concessionário<br>Nome: ${d["vd-vendedor-nome"]||""}<br>CPF: ${d["vd-vendedor-cpf"]||""}</div></div>
-    </div>`;
-  abrirJanelaImpressaoDoc("Pedido de Compra VD", corpo);
+  imprimirDocPedidoVDFielExcel(state.documentos.pedidovd || {});
 });
 document.getElementById("btnAddFaixaPagina").addEventListener("click", ()=>{
   state.gerente.regrasConfig.paginasExcluir.push({de:null, ate:null});
