@@ -2495,8 +2495,8 @@ function renderAll(){ renderDashboard(); renderMetaVolks(); renderControle(); re
 function chaveVersaoG(r){ return r.m+" · "+r.v; }
 function regrasBaseGerente(){
   const REGRAS=[];
-  function add(m,v,c,am,op,de,ate,nf,nfr,ti,tir,bv,bvr,tot,tx,obs,marca){
-    REGRAS.push({m,v,c,am,op,de,ate,nf,ti,bv,rede:nfr+tir+bvr,tot,tx,obs:obs||"",marca:marca||null});
+  function add(m,v,c,am,op,de,ate,nf,nfr,ti,tir,bv,bvr,tot,tx,obs){
+    REGRAS.push({m,v,c,am,op,de,ate,nf,ti,bv,rede:nfr+tir+bvr,tot,tx,obs:obs||""});
   }
 /* POLO TRACK */
 const PT=["23/24","24/24","24/25","25/25","25/26"];
@@ -2752,28 +2752,36 @@ function diasEstoqueG(){
   el.textContent = `Faturado em ${dtG(est.fat).toLocaleDateString("pt-BR")}, contando de hoje (${HOJE_G.toLocaleDateString("pt-BR")}).`;
 }
 
-// Compara marca ignorando maiúsculas/minúsculas e acentos, pra "volkswagen" e "Volkswagen" baterem igual.
-function normalizarMarcaG(s){
-  return String(s||"").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+// Algumas regras da política já vêm em pares pro mesmo veículo (mesmo m/v/c/am/de/ate),
+// uma valendo pra troca por qualquer marca e outra "Exclusiva/Loyalty" só pra troca por
+// Volkswagen — a diferença entre elas está escrita no próprio texto do "obs" da regra
+// (ex.: "Exclusivo Loyalty: bônus trade-in de R$8.000 valido somente para veiculo usado
+// Volkswagen na troca"). Essa função só LÊ esse texto que já está na política; não cria
+// regra nem valor nenhum.
+function regraExigeTrocaVW(r){
+  const obs = (r.obs||"").toLowerCase();
+  return obs.includes("exclusivo loyalty") || (obs.includes("somente") && obs.includes("volkswagen"));
 }
 function buscarG(){
   const est = state.gerente.est;
   const p = state.gerente.politica;
   if (!est.versao || !est.ano || !est.fat) return [];
   const f = dtG(est.fat);
-  return p.regras.filter(r=>{
+  const achadas = p.regras.filter(r=>{
     if (chaveVersaoG(r)!==est.versao) return false;
     if (!r.am.includes(est.ano)) return false;
     if (r.de && f<dtG(r.de)) return false;
     if (r.ate && f>dtG(r.ate)) return false;
-    // Regras sem "marca" cadastrada valem pra qualquer marca de troca (comportamento
-    // de hoje, inalterado). Só filtra quando a regra JÁ especifica marcas e o usuário
-    // já informou a marca do carro na troca.
-    if (r.marca && r.marca.length && est.marcaTroca){
-      const alvo = normalizarMarcaG(est.marcaTroca);
-      if (!r.marca.some(mc=>normalizarMarcaG(mc)===alvo)) return false;
-    }
     return true;
+  });
+  // Sem a marca do carro na troca informada, mantém o comportamento de sempre: mostra
+  // todas as regras que batem (se houver mais de uma, o aviso de conflito de sempre avisa).
+  if (!est.marcaTroca) return achadas;
+  const temExclusivaVW = achadas.some(regraExigeTrocaVW);
+  if (!temExclusivaVW) return achadas; // essa regra não tem variante por marca — nada muda
+  return achadas.filter(r=>{
+    const exigeVW = regraExigeTrocaVW(r);
+    return est.marcaTroca === "Volkswagen" ? exigeVW : !exigeVW;
   });
 }
 function linhaG(rot, val, cls, marca){
@@ -2861,7 +2869,7 @@ function calcularGerente(){
   // Se o empate é porque a regra tem marcas cadastradas e o usuário ainda não
   // informou a marca do carro na troca, o aviso de conflito é sobre isso — não
   // sobre faixa de faturamento sobreposta.
-  const conflitoPorMarca = conflito && !est.marcaTroca && cands.some(r=>r.marca && r.marca.length);
+  const conflitoPorMarca = conflito && !est.marcaTroca && cands.some(regraExigeTrocaVW);
 
   // REGRA FIXA DE NEGÓCIO: Polo Track e Tera MPI sempre têm desconto de gerente travado em 2%,
   // independente do que estiver digitado no campo — vale pra qualquer política carregada.
@@ -3550,10 +3558,9 @@ function montarEsquemaGerente(){
 {"m":modelo,"v":versão,"c":código do modelo,"am":[anos modelo como "24/25"],"op":1 ou 2 ou null,
 "de":"AAAA-MM-DD" ou null,"ate":"AAAA-MM-DD" ou null,
 "nf":desconto em nota,"ti":trade-in,"bv":bônus varejo,"rede":soma das participações rede da linha,
-"tot":o total impresso na coluna Total,"tx":"taxas separadas por · ","obs":"","marca":null}
+"tot":o total impresso na coluna Total,"tx":"taxas separadas por · ","obs":""}
 Regras: "de"/"ate" são as datas de FATURAMENTO NO ATACADO, não a data de venda no varejo — isso é o que define a validade de cada regra, com base em quantos dias o carro está em estoque.
 "op" só é preenchido quando a mesma linha tem 1ª e 2ª opção ligadas a taxas de financiamento diferentes — é a segunda coisa que define o bônus, depois da validade. Quando o cliente for pagar à vista, isso não muda o cálculo.
-"marca" só é preenchido quando a PRÓPRIA circular disser explicitamente que o bônus de trade-in ("ti") dessa linha vale só para troca por determinada(s) marca(s) (ex: "bônus trade-in de R$ X só para troca por Volkswagen"). Nesse caso, crie uma linha para cada marca/valor com "marca":["Volkswagen"] (ou a lista de marcas daquela linha) e o "ti" correspondente a cada uma. Se a circular não falar nada sobre marca do usado, deixe "marca":null — é o caso da grande maioria das linhas.
 NUNCA inclua Participação Rede em nf, ti ou bv. Ela aparece em VERMELHO na circular, como
 "+ Participação Rede R$ 2.000", e fica fora do cálculo: se o Bônus Varejo mostra
 "R$ 7.500 + Participação Rede R$ 2.000", então bv = 7500 e rede = 2000.
@@ -3611,7 +3618,7 @@ async function lerPoliticaPdf(file){
     state.gerente.politica = {
       nome: file.name.replace(/\.pdf$/i,""),
       dataCarregada: todayISO(),
-      regras: arr.map(x=>Object.assign({m:"",v:"",c:"",am:[],op:null,de:null,ate:null,nf:0,ti:0,bv:0,rede:0,tot:0,tx:"",obs:"",marca:null}, x)),
+      regras: arr.map(x=>Object.assign({m:"",v:"",c:"",am:[],op:null,de:null,ate:null,nf:0,ti:0,bv:0,rede:0,tot:0,tx:"",obs:""}, x)),
     };
     state.gerente.est = {modelo:"", versao:"", ano:"", fat:"", dias:null, preco:0, usado:0, gerPct:state.gerente.est.gerPct||3, op:null, marcaTroca:""};
     persist();

@@ -674,7 +674,7 @@ document.getElementById("gerenteArquivoJson").addEventListener("change", async e
     state.gerente.politica = {
       nome: (p.nome || f.name.replace(/\.json$/i,"")),
       dataCarregada: todayISO(),
-      regras: regras.map(x=>Object.assign({m:"",v:"",c:"",am:[],op:null,de:null,ate:null,nf:0,ti:0,bv:0,rede:0,tot:0,tx:"",obs:"",marca:null}, x)),
+      regras: regras.map(x=>Object.assign({m:"",v:"",c:"",am:[],op:null,de:null,ate:null,nf:0,ti:0,bv:0,rede:0,tot:0,tx:"",obs:""}, x)),
     };
     state.gerente.est = {modelo:"", versao:"", ano:"", fat:"", dias:null, preco:0, usado:0, gerPct:state.gerente.est.gerPct||3, op:null, marcaTroca:""};
     persist();
