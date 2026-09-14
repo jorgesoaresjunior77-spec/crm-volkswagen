@@ -782,6 +782,26 @@ function renderMensagemDia(){
 
   document.getElementById("mensagemDiaTexto").innerHTML = `${observacao}<br><span style="opacity:.8;font-size:12px;font-style:italic;">💬 "${principio.texto}" <span style="opacity:.7;font-style:normal;font-weight:700;">— ${principio.autor}</span></span>`;
 }
+/* Balão flutuante de feriados do mês — chamado uma única vez por login/carregamento de
+   página (ver autenticarEControlarAcesso em vendedores.js), nunca a cada renderAll(),
+   pra aparecer de novo a cada F5/login em vez de "só uma vez por sessão". */
+function fecharBalaoFeriados(){
+  const wrap = document.getElementById("feriadosBalaoWrap");
+  if (wrap) wrap.style.display = "none";
+}
+function mostrarBalaoFeriados(){
+  const wrap = document.getElementById("feriadosBalaoWrap");
+  if (!wrap) return;
+  const feriadosMes = feriadosDoMes(state.config.mesRef);
+  if (feriadosMes.length===0){ wrap.style.display = "none"; return; }
+  document.getElementById("feriadosBalaoLista").innerHTML = feriadosMes.map(f=>
+    `<li class="feriados-balao-item">
+      <div class="feriados-balao-data">${fmtDate(f.data)} <span class="feriados-balao-tag">${f.tipo}</span></div>
+      <div class="feriados-balao-nome">${f.nome}</div>
+    </li>`
+  ).join("");
+  wrap.style.display = "block";
+}
 function renderBannerPedidos(){
   // Lembrete operacional PESSOAL: mesmo o admin, que recebe (via RLS) as linhas de
   // todo mundo em state.clientes, só deve ver aqui os PRÓPRIOS pedidos — nunca os
@@ -897,18 +917,6 @@ function renderDashboard(){
   renderMensagemDia();
   const cfg = {...state.config, ...metasDoVendedorAtual()};
 
-  {
-    const feriadosMes = feriadosDoMes(cfg.mesRef);
-    const wrap = document.getElementById("feriadosPanelWrap");
-    if (feriadosMes.length===0){
-      wrap.style.display = "none";
-    } else {
-      wrap.style.display = "block";
-      document.getElementById("feriadosLista").innerHTML = feriadosMes.map(f=>
-        `<li><b>${fmtDate(f.data)}</b> (${f.diaSemana}) — ${f.nome} <span style="color:var(--text-mute);font-size:11px;">[${f.tipo}]</span></li>`
-      ).join("");
-    }
-  }
   const vMes = vendasDoMesAtual();
   const comissaoTotal = vMes.reduce((s,v)=>s+(Number(v.comissao)||0),0);
   const emplacamentoTotal = vMes.reduce((s,v)=>s+(Number(v.emplacamentoValor)||0),0);

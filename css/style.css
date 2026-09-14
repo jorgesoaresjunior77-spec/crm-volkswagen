@@ -647,13 +647,9 @@
 
   .humor-resumo-hoje{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border-light); font-size:12.5px; color:var(--text-dim); display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
   .humor-resumo-hoje b{ color:var(--graphite); }
-  .banners-topo-row{ display:grid; grid-template-columns:10fr 7fr 3fr; gap:10px; align-items:stretch; }
+  .banners-topo-row{ display:grid; grid-template-columns:1.3fr 1fr; gap:10px; align-items:stretch; }
   .banners-topo-row .panel{ margin-bottom:0; }
   @media(max-width:900px){ .banners-topo-row{ grid-template-columns:1fr; } }
-  .feriados-compact-card{ padding:10px 12px; }
-  .feriados-compact-card h2{ display:block; font-size:12px; margin:0 0 4px; white-space:normal; }
-  .feriados-compact-card h2 .icon-hero{ margin-right:4px; font-size:14px; }
-  .feriados-compact-card h2 > span:not(.icon-hero){ display:block; font-size:8.5px; font-weight:500; line-height:1.3; margin:2px 0 0; }
   .bolhas-cluster-wrap{
     background:var(--card); border-radius:var(--radius); border:1px solid var(--border); border-top:3px solid var(--navy);
     box-shadow:var(--shadow-corner); padding:16px 16px 10px; overflow:hidden;
@@ -671,7 +667,7 @@
   .bolha .bolha-valor{ font-size:15px; font-weight:800; line-height:1.15; }
   @media(max-width:640px){ .bolha .bolha-valor{ font-size:12.5px; } .bolha .bolha-label{ font-size:8.5px; } }
   #calAnivBox{ max-width:480px; margin:0 auto; }
-  .banners-topo-row .card-total{ margin-bottom:0; display:flex; flex-direction:column; justify-content:center; }
+  .banners-topo-row .card-total{ margin-bottom:0; padding:10px 16px; display:flex; flex-direction:column; justify-content:center; }
   .comissao-3col{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; width:100%; }
   .comissao-col{ padding:0 12px; min-width:0; display:flex; flex-direction:column; }
   .comissao-col:first-child{ padding-left:0; }
@@ -680,7 +676,7 @@
   .comissao-col .label{ font-size:9.5px; white-space:normal; line-height:1.2; margin-bottom:3px; min-height:0; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
   .comissao-col .label .icone-grande{ font-size:15px; vertical-align:middle; margin-right:0; flex-shrink:0; }
   .comissao-col-value{ font-size:15px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .comissao-toque-hint{ font-size:10.5px; opacity:.75; margin-top:6px; text-align:center; font-weight:600; }
+  .comissao-toque-hint{ font-size:9.5px; opacity:.75; margin-top:4px; text-align:center; font-weight:600; }
   @media(max-width:640px){
     .comissao-3col{ grid-template-columns:1fr; gap:12px; }
     .comissao-col{ padding:0 0 12px; border-right:none !important; border-bottom:1px solid rgba(255,255,255,.28); }
@@ -691,18 +687,46 @@
   .icon-hero{ display:inline-block; filter:drop-shadow(0 3px 5px rgba(0,0,0,.3)); animation:iconHeroPulse 2.4s ease-in-out infinite; }
   @keyframes iconHeroPulse{ 0%,100%{ transform:scale(1) rotate(0deg);} 50%{ transform:scale(1.13) rotate(-3deg);} }
   .mensagem-dia-panel{
-    display:flex; align-items:center; gap:14px; margin-top:0; margin-bottom:0;
+    display:flex; align-items:center; gap:12px; margin-top:0; margin-bottom:0;
     background:linear-gradient(135deg,#0b0620,#1a1240); border:1px solid rgba(0,229,255,.25);
-    box-shadow:var(--shadow-corner); padding:14px 18px;
+    box-shadow:var(--shadow-corner); padding:10px 16px;
   }
-  .mensagem-dia-icone{ position:relative; font-size:32px; flex-shrink:0; filter:drop-shadow(0 0 10px rgba(0,229,255,.7)); line-height:1; }
-  .mensagem-dia-icone .raio{ position:absolute; font-size:16px; filter:drop-shadow(0 0 6px rgba(255,229,0,.9)); animation:raioPisca 1.6s ease-in-out infinite; }
-  .mensagem-dia-icone .raio1{ top:-8px; right:-10px; animation-delay:0s; }
-  .mensagem-dia-icone .raio2{ bottom:-4px; left:-12px; font-size:13px; animation-delay:.8s; }
+  .mensagem-dia-icone{ position:relative; font-size:26px; flex-shrink:0; filter:drop-shadow(0 0 10px rgba(0,229,255,.7)); line-height:1; }
+  .mensagem-dia-icone .raio{ position:absolute; font-size:14px; filter:drop-shadow(0 0 6px rgba(255,229,0,.9)); animation:raioPisca 1.6s ease-in-out infinite; }
+  .mensagem-dia-icone .raio1{ top:-7px; right:-9px; animation-delay:0s; }
+  .mensagem-dia-icone .raio2{ bottom:-3px; left:-10px; font-size:11px; animation-delay:.8s; }
   @keyframes raioPisca{ 0%,100%{ opacity:.25; transform:scale(.85) rotate(-8deg); } 50%{ opacity:1; transform:scale(1.15) rotate(6deg); } }
   .mensagem-dia-panel > div:last-child{ min-width:0; flex:1; }
-  .mensagem-dia-titulo{ font-size:11px; font-weight:800; letter-spacing:.8px; color:#00E5FF; text-transform:uppercase; margin-bottom:4px; }
-  .mensagem-dia-texto{ font-size:13px; line-height:1.6; color:rgba(255,255,255,.9); overflow-wrap:anywhere; }
+  .mensagem-dia-titulo{ font-size:10px; font-weight:800; letter-spacing:.8px; color:#00E5FF; text-transform:uppercase; margin-bottom:3px; }
+  .mensagem-dia-texto{ font-size:12.5px; line-height:1.45; color:rgba(255,255,255,.9); overflow-wrap:anywhere; }
+
+  /* ============================= BALÃO FLUTUANTE DE FERIADOS ============================= */
+  .feriados-balao{
+    position:fixed; right:18px; bottom:18px; z-index:500; max-width:300px;
+    background:var(--card); border:1px solid var(--border); border-left:4px solid var(--orange);
+    border-radius:14px; box-shadow:0 14px 32px rgba(10,20,40,.25); padding:14px 16px;
+    animation:feriadosBalaoIn .35s ease;
+  }
+  @keyframes feriadosBalaoIn{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  .feriados-balao-fechar{
+    position:absolute; top:8px; right:8px; width:22px; height:22px; border-radius:50%; border:none;
+    background:var(--card-tint); color:var(--text-dim); font-size:11px; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:.15s ease;
+  }
+  .feriados-balao-fechar:hover{ background:var(--orange-tint); color:var(--orange-deep); }
+  .feriados-balao-titulo{ font-weight:800; font-size:12.5px; color:var(--graphite); margin:0 22px 8px 0; }
+  .feriados-balao-lista{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; }
+  .feriados-balao-item{ font-size:11.5px; line-height:1.4; border-top:1px solid var(--border-light); padding-top:8px; }
+  .feriados-balao-item:first-child{ border-top:none; padding-top:0; }
+  .feriados-balao-data{ font-weight:800; color:var(--orange-deep); display:flex; align-items:center; gap:6px; }
+  .feriados-balao-nome{ color:var(--graphite-2); margin-top:1px; }
+  .feriados-balao-tag{
+    font-size:8.5px; font-weight:800; text-transform:uppercase; letter-spacing:.3px;
+    padding:1px 6px; border-radius:8px; background:var(--card-tint); color:var(--text-dim);
+  }
+  @media(max-width:640px){
+    .feriados-balao{ left:12px; right:12px; bottom:12px; max-width:none; }
+  }
 
   #datasEspeciaisWrap{ display:flex; flex-direction:column; gap:10px; margin:14px 0; }
   .data-especial-panel{

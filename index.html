@@ -128,12 +128,6 @@
           <div class="mensagem-dia-texto" id="mensagemDiaTexto">Carregando...</div>
         </div>
       </div>
-
-      <div class="panel feriados-compact-card" id="feriadosPanelWrap" style="display:none;">
-        <h2><span class="icon-hero">📅</span> Feriados neste Mês <span>esses dias não contam como dia útil no cálculo das metas</span></h2>
-        <ul id="feriadosLista" style="margin:0;padding-left:15px;font-size:10.5px;color:var(--text-dim);line-height:1.35;"></ul>
-        <p style="font-size:9px;color:var(--text-mute);margin-top:6px;margin-bottom:0;line-height:1.35;">Feriados nacionais e estaduais (RS) calculados automaticamente. Feriados municipais/regionais podem ser adicionados em Configurações.</p>
-      </div>
     </div>
 
     <div id="datasEspeciaisWrap"></div>
@@ -864,6 +858,12 @@
 </div>
 <!-- /appShell: escondido até a sessão do Supabase Auth ser confirmada (ver auth.js) -->
 
+<div id="feriadosBalaoWrap" class="feriados-balao" style="display:none;" role="status">
+  <button type="button" class="feriados-balao-fechar" id="feriadosBalaoFechar" title="Fechar" aria-label="Fechar">✕</button>
+  <div class="feriados-balao-titulo">🔔 Feriados neste mês</div>
+  <ul class="feriados-balao-lista" id="feriadosBalaoLista"></ul>
+</div>
+
 <div id="relatorioOverlay" class="proposta-modal-overlay" onclick="if(event.target===this) fecharRelatorio();">
   <div class="proposta-modal-box" style="max-width:720px;">
     <div id="relatorioContent"></div>
@@ -1093,14 +1093,14 @@
 
 <!-- "?v=" evita que o navegador/CDN sirva uma cópia antiga em cache depois de um deploy;
      mude esse valor em TODOS os scripts sempre que qualquer um deles for alterado. -->
-<script src="js/vendedores.js?v=20260914-1"></script>
-<script src="js/auth.js?v=20260914-1"></script>
-<script src="js/supabase.js?v=20260914-1"></script>
-<script src="js/clientes.js?v=20260914-1"></script>
-<script src="js/propostas.js?v=20260914-1"></script>
-<script src="js/estoque.js?v=20260914-1"></script>
-<script src="js/utils.js?v=20260914-1"></script>
-<script src="js/crm.js?v=20260914-1"></script>
-<script src="js/app.js?v=20260914-1"></script>
+<script src="js/vendedores.js?v=20260914-2"></script>
+<script src="js/auth.js?v=20260914-2"></script>
+<script src="js/supabase.js?v=20260914-2"></script>
+<script src="js/clientes.js?v=20260914-2"></script>
+<script src="js/propostas.js?v=20260914-2"></script>
+<script src="js/estoque.js?v=20260914-2"></script>
+<script src="js/utils.js?v=20260914-2"></script>
+<script src="js/crm.js?v=20260914-2"></script>
+<script src="js/app.js?v=20260914-2"></script>
 </body>
 </html>

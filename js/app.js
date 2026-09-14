@@ -774,6 +774,7 @@ document.getElementById("olhoComissaoBtn").addEventListener("click", (e)=>{
 });
 document.getElementById("btnVerPedidos").addEventListener("click", abrirPedidosModal);
 document.getElementById("btnComissaoFinal").addEventListener("click", abrirRelatorioComissao);
+document.getElementById("feriadosBalaoFechar").addEventListener("click", fecharBalaoFeriados);
 
 document.getElementById("btnSalvarMetaSalario").addEventListener("click", ()=>{
   const v = +document.getElementById("metaSalarioInput").value || 0;

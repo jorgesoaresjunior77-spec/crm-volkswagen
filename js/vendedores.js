@@ -75,6 +75,7 @@ async function autenticarEControlarAcesso(user){
   await carregarEstadoNuvem();
   esconderLoginOverlay();
   atualizarInfoVendedorLogado();
+  mostrarBalaoFeriados(); // aparece a cada login/recarregamento de página, nunca só uma vez
   if (currentVendedorPerfil.deveTrocarSenha) mostrarTrocarSenhaOverlay();
   return true;
 }
