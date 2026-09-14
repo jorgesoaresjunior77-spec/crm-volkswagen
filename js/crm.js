@@ -1215,9 +1215,11 @@ function renderVendas(){
   renderCompeticaoCarros();
   const tbody = document.querySelector("#vendasTable tbody");
   const tfoot = document.querySelector("#vendasTable tfoot");
-  const vendasVisiveis = filtrarPorVendedor(state.vendas);
+  // Respeita o mês/ano selecionado no cabeçalho (mesma referência usada no Dashboard) —
+  // vendas de outros meses continuam no banco, só não aparecem aqui até trocar o seletor.
+  const vendasVisiveis = vendasDoMesAtual();
   if (vendasVisiveis.length===0){
-    tbody.innerHTML = `<tr><td colspan="16" class="empty">Nenhuma venda registrada ainda.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="16" class="empty">Nenhuma venda registrada em ${state.config.mesRef} ainda.</td></tr>`;
     tfoot.innerHTML = "";
     return;
   }
@@ -1244,7 +1246,7 @@ function renderVendas(){
   const totalRetornoBanco = vendasVisiveis.reduce((s,v)=>s+(Number(v.retornoBanco)||0),0);
   const totalComissao = vendasVisiveis.reduce((s,v)=>s+(Number(v.comissao)||0),0);
   const totalGeral = vendasVisiveis.reduce((s,v)=>s+(Number(v.total)||0),0);
-  tfoot.innerHTML = `<tr><td colspan="8">TOTAL (todas as vendas)</td><td>${moneyFmt(totalValor)}</td><td></td>
+  tfoot.innerHTML = `<tr><td colspan="8">TOTAL (${state.config.mesRef})</td><td>${moneyFmt(totalValor)}</td><td></td>
     <td>${moneyFmt(totalEmplac)}</td><td></td><td>${moneyFmt(totalRetornoBanco)}</td><td>${moneyFmt(totalComissao)}</td><td>${moneyFmt(totalGeral)}</td><td></td></tr>`;
 }
 function editarVenda(id){
