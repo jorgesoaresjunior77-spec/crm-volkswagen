@@ -71,7 +71,6 @@
 <nav id="navPrincipal">
   <button type="button" id="btnNavToggle" class="nav-toggle" aria-label="Abrir menu" aria-expanded="false">☰ Menu</button>
   <button data-view="dashboard" class="active">Dashboard</button>
-  <button data-view="controle">Controle Diário</button>
   <button data-view="vendas">Vendas</button>
   <button data-view="clientes">Painel Clientes - Pedidos</button>
   <button data-view="fipedetran">Tabela FIPE</button>
@@ -129,6 +128,12 @@
           <div class="mensagem-dia-texto" id="mensagemDiaTexto">Carregando...</div>
         </div>
       </div>
+
+      <div class="panel feriados-compact-card" id="feriadosPanelWrap" style="display:none;">
+        <h2><span class="icon-hero">📅</span> Feriados neste Mês <span>esses dias não contam como dia útil no cálculo das metas</span></h2>
+        <ul id="feriadosLista" style="margin:0;padding-left:15px;font-size:10.5px;color:var(--text-dim);line-height:1.35;"></ul>
+        <p style="font-size:9px;color:var(--text-mute);margin-top:6px;margin-bottom:0;line-height:1.35;">Feriados nacionais e estaduais (RS) calculados automaticamente. Feriados municipais/regionais podem ser adicionados em Configurações.</p>
+      </div>
     </div>
 
     <div id="datasEspeciaisWrap"></div>
@@ -140,12 +145,6 @@
     <div class="dash-divider"></div>
 
     <div class="cards cards-compact" id="dashCardsBottom"></div>
-
-    <div class="panel" id="feriadosPanelWrap" style="display:none;">
-      <h2><span class="icon-hero">📅</span> Feriados neste Mês <span>esses dias não contam como dia útil no cálculo das metas</span></h2>
-      <ul id="feriadosLista" style="margin:0;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.9;"></ul>
-      <p style="font-size:11px;color:var(--text-mute);margin-top:10px;margin-bottom:0;">Feriados nacionais e estaduais (RS) calculados automaticamente. Feriados municipais/regionais podem ser adicionados em Configurações.</p>
-    </div>
 
     <div class="panel">
       <h2>Velocímetros de Metas do Mês <span>% atingido em cada frente de negócio</span></h2>
@@ -234,48 +233,8 @@
       </div>
     </div>
 
-    <div class="panel">
-      <h2><span class="icon-hero">📞</span> Central de Ligações <span>total, atendidas e não atendidas — mês atual</span></h2>
-      <div class="cards" id="statsLigacoesCards"></div>
-      <div class="insta-chart-wrap" style="margin-top:16px;border-top:1px solid var(--border-light);padding-top:16px;display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;">
-        <div style="flex:1;min-width:260px;">
-          <div class="insta-chart-title">Atendidas x Não Atendidas <span style="color:var(--text-mute);font-weight:600;">pizza 3D</span></div>
-          <div id="chartLigacoesPizza"></div>
-        </div>
-        <div class="gauge-box" style="flex:0 0 auto;">
-          <div id="gaugeAtendimento"></div>
-          <div class="gauge-title">% de Atendimento</div>
-          <div class="gauge-label" id="labelAtendimento">0%</div>
-        </div>
-      </div>
-    </div>
+    <div class="projection" id="projectionBox">📈 Registre vendas neste mês para ver a projeção.</div>
 
-    <div class="panel">
-      <h2>😊 Humor x Desempenho <span>como seu humor do dia se relaciona com ligações e vendas</span></h2>
-      <div class="cards" id="statsHumorCards"></div>
-      <div class="insta-chart-wrap" style="margin-top:16px;border-top:1px solid var(--border-light);padding-top:16px;">
-        <div class="insta-chart-title">Média de Ligações e Vendas por Humor do Dia</div>
-        <div class="table-wrap"><table id="tblHumorDesempenho"><thead><tr><th>Humor</th><th>Dias</th><th>Média Ligações</th><th>Média Vendas</th></tr></thead><tbody></tbody></table></div>
-      </div>
-      <div class="insta-chart-wrap" style="margin-top:18px;border-top:1px solid var(--border-light);padding-top:16px;">
-        <div class="insta-chart-title">💡 O que os dados mostram</div>
-        <ul id="humorInsightsList" class="insta-insights-list"></ul>
-      </div>
-    </div>
-
-    <div class="projection" id="projectionBox">📈 Cadastre os dados do dia para ver a projeção.</div>
-    <div class="panel">
-      <h2>Atividade de hoje <span>vs. meta diária</span></h2>
-      <div class="table-wrap"><table id="todayTable"><thead><tr><th>Indicador</th><th>Hoje</th><th>Meta</th><th>% Atingido</th></tr></thead><tbody></tbody></table></div>
-    </div>
-    <div class="panel">
-      <h2>Ranking rápido</h2>
-      <div class="cards" id="rankCards"></div>
-    </div>
-    <div class="panel">
-      <h2>Funil de Vendas <span>ligações → conversas → interessados → visitas → test drive → proposta → venda</span></h2>
-      <div id="chartFunil"></div>
-    </div>
     <div class="cards" style="grid-template-columns:1fr 1fr;">
       <div class="panel" style="margin-bottom:0;">
         <h2>Vendas por dia</h2>
@@ -286,272 +245,10 @@
         <div id="chartTipo"></div>
       </div>
     </div>
-    <div class="panel">
-      <h2>Progresso das metas diárias <span>total do mês vs. meta mensal implícita (meta diária × dias do mês)</span></h2>
-      <div id="metasProgress"></div>
-    </div>
-    <div class="panel">
-      <h2 style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <span>📞 Tendência diária de ligações <span>não atendidas, atendidas sem/com interesse, inválidos e WhatsApp</span></span>
-        <button type="button" class="ghost" id="btnRelatorioLigacoesPdf" style="width:auto;font-size:11px;padding:6px 12px;">📄 Relatório de Ligações (PDF)</button>
-      </h2>
-      <div id="chartTendenciaLig"></div>
-      <div id="legendTendenciaLig" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:12px;color:var(--text-dim);"></div>
-    </div>
-    <div class="panel">
-      <h2>📸 Tendência diária de conteúdo <span>stories, reels, postagem no feed e ofertas do mês</span></h2>
-      <div id="chartTendenciaConteudo"></div>
-      <div id="legendTendenciaConteudo" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:12px;color:var(--text-dim);"></div>
-    </div>
-    <div class="cards" style="grid-template-columns:1fr 1fr;">
-      <div class="panel" style="margin-bottom:0;">
-        <h2>Taxas de conversão do funil <span>% entre etapas</span></h2>
-        <div id="chartConversao"></div>
-      </div>
-      <div class="panel" style="margin-bottom:0;">
-        <h2>Calendário de atividade <span>🟢 dia com venda</span></h2>
-        <div id="calBox"></div>
-      </div>
-    </div>
 
     <div class="panel">
-      <h2><span class="icon-hero">📸</span> Dados Instagram <span>preenchido diariamente pelo Controle Diário — números atuais da conta</span></h2>
-      <div class="insta-kpis-grid" id="instaKpis"></div>
-
-      <div class="growth-intel-panel">
-        <div class="growth-intel-header">
-          <div>
-            <div class="growth-intel-title"><span class="icon-hero">⚡</span> GROWTH INTELLIGENCE</div>
-            <div class="growth-intel-sub">Índice calculado com base em benchmarks reais do algoritmo do Instagram em 2026</div>
-          </div>
-          <div class="growth-score-box">
-            <div class="growth-score-ring" id="growthScoreRing"></div>
-            <div class="growth-score-num" id="growthScoreValue">0</div>
-            <div class="growth-score-label">GROWTH SCORE</div>
-          </div>
-        </div>
-        <div class="growth-intel-body">
-          <div id="radarChartGrowth"></div>
-          <div class="growth-metrics-col" id="growthMetricsCards"></div>
-        </div>
-        <div class="growth-intel-tip" id="algoritmoTipBox"></div>
-      </div>
-
-      <div class="insta-meta-box">
-        <div class="insta-meta-form">
-          <label>🎯 Meta de Seguidores</label>
-          <div style="display:flex;gap:8px;">
-            <input type="number" min="0" id="instaMetaInput" placeholder="Ex: 3000">
-            <button class="primary" id="btnSalvarMetaInsta" style="white-space:nowrap;">Salvar meta</button>
-          </div>
-        </div>
-        <div class="insta-meta-progress">
-          <div class="progress-wrap" style="height:22px;"><div class="progress-bar" id="instaMetaBar" style="width:0%;background:linear-gradient(90deg,#833AB4,#FD1D1D,#FCB045);"></div><div class="progress-label" id="instaMetaLabel">—</div></div>
-          <div id="instaMetaMsg" style="font-size:11.5px;color:var(--text-dim);margin-top:6px;"></div>
-        </div>
-      </div>
-
-      <div class="insta-chart-wrap" style="margin-top:18px;border-top:1px solid var(--border-light);padding-top:16px;">
-        <div class="insta-chart-title">Estatísticas de Crescimento</div>
-        <div class="insta-stats-grid" id="instaStatsCards"></div>
-      </div>
-
-      <div class="insta-chart-wrap">
-        <div class="insta-chart-title">Crescimento de Seguidores no Mês <span id="instaDelta"></span></div>
-        <div id="chartInstaGrowth"></div>
-      </div>
-      <div class="insta-chart-wrap" style="margin-top:18px;border-top:1px solid var(--border-light);padding-top:16px;">
-        <div class="insta-chart-title">Ganho/Perda de Seguidores por Dia <span style="color:var(--text-mute);font-weight:600;">valores exatos de cada dia</span></div>
-        <div id="chartInstaDeltaDiario"></div>
-      </div>
-      <div class="insta-chart-wrap" style="margin-top:18px;border-top:1px solid var(--border-light);padding-top:16px;">
-        <div class="insta-chart-title">Crescimento Comparado (%) <span style="color:var(--text-mute);font-weight:600;">seguidores, painel e insights, desde o início do mês</span></div>
-        <div id="chartInstaCompar"></div>
-        <div id="legendInstaCompar" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11px;color:var(--text-dim);"></div>
-      </div>
-      <div class="insta-chart-wrap" style="margin-top:18px;border-top:1px solid var(--border-light);padding-top:16px;">
-        <div class="insta-chart-title">Conteúdo Publicado × Ganho de Seguidores <span style="color:var(--text-mute);font-weight:600;">escalas normalizadas, para comparar picos</span></div>
-        <div id="chartInstaCorrelacao"></div>
-        <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--text-dim);">
-          <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#F77737;margin-right:5px;"></span>Conteúdo publicado (stories+reels+feed)</span>
-          <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#833AB4;margin-right:5px;"></span>Novos seguidores no dia</span>
-        </div>
-      </div>
-      <div class="insta-chart-wrap" style="margin-top:18px;border-top:1px solid var(--border-light);padding-top:16px;">
-        <div class="insta-chart-title">Onde Melhorar para Crescer <span style="color:var(--text-mute);font-weight:600;">ganho médio de seguidores em dias com cada atividade x dias sem</span></div>
-        <div id="chartInstaMelhorias"></div>
-      </div>
-      <div class="insta-chart-wrap" style="margin-top:18px;border-top:1px solid var(--border-light);padding-top:16px;">
-        <div class="insta-chart-title">💡 Recomendações</div>
-        <ul id="instaInsightsList" class="insta-insights-list"></ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- CONTROLE DIÁRIO -->
-  <section id="view-controle" class="view">
-    <div class="panel">
-      <h2>Lançar atividade do dia <span>pode salvar quantas vezes quiser no mesmo dia — tudo é somado, nada é sobrescrito</span></h2>
-      <form class="inline" id="formControle" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;">
-        <div class="controle-grupo">
-          <div class="controle-grupo-grid">
-            <div style="width:150px;"><label>Data</label><input type="date" id="cData" required></div>
-          </div>
-          <div id="cAvisoDiaWrap" style="display:none;margin-top:10px;font-size:11.5px;color:var(--orange-deep);background:var(--orange-tint);border-radius:10px;padding:8px 12px;max-width:340px;"></div>
-        </div>
-
-        <div class="controle-grupo">
-          <div class="controle-grupo-titulo">📞 Ligações</div>
-          <div class="controle-grupo-grid">
-            <div><label>Telefones Inválidos</label><input type="number" min="0" id="cLigInvalido" value="0"></div>
-            <div><label>Ligações Não Atendidas</label><input type="number" min="0" id="cLigNao" value="0"></div>
-            <div><label>Ligações Atendidas Sem Interesse</label><input type="number" min="0" id="cLigAtendSem" value="0"></div>
-            <div><label>Ligações Atendidas Com Interesse</label><input type="number" min="0" id="cLigAtendCom" value="0"></div>
-          </div>
-        </div>
-
-        <div class="controle-grupo">
-          <div class="controle-grupo-titulo">💬 WhatsApp</div>
-          <div class="controle-grupo-grid">
-            <div><label>WhatsApp</label><input type="number" min="0" id="cWpp" value="0"></div>
-          </div>
-        </div>
-
-        <div class="controle-grupo">
-          <div class="controle-grupo-titulo">📱 Redes Sociais</div>
-          <div class="controle-grupo-grid">
-            <div><label>Stories</label><input type="number" min="0" id="cSto" value="0"></div>
-            <div><label>Reels</label><input type="number" min="0" id="cRee" value="0"></div>
-            <div><label>Postagem no Feed</label><input type="number" min="0" id="cFeed" value="0"></div>
-          </div>
-        </div>
-
-        <div class="controle-grupo">
-          <div class="controle-grupo-titulo">🏷️ Ofertas</div>
-          <div class="controle-grupo-grid">
-            <div><label>Ofertas do Mês <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">(Novos e Usados)</span></label><input type="number" min="0" id="cOfe" value="0"></div>
-          </div>
-        </div>
-
-        <div class="controle-grupo">
-          <div class="controle-grupo-titulo">🤝 Contatos com Clientes</div>
-          <div class="controle-grupo-grid">
-            <div><label>Leads Novos</label><input type="number" min="0" id="cNov" value="0"></div>
-            <div><label>Retornos</label><input type="number" min="0" id="cRet" value="0"></div>
-          </div>
-        </div>
-
-        <div class="controle-grupo">
-          <div class="controle-grupo-titulo">🏬 Movimento na Loja</div>
-          <div class="controle-grupo-grid">
-            <div><label>Visitas Loja</label><input type="number" min="0" id="cVis" value="0"></div>
-            <div><label>Test Drive</label><input type="number" min="0" id="cTd" value="0"></div>
-          </div>
-        </div>
-
-        <div class="controle-grupo">
-          <div class="controle-grupo-titulo">📋 Fechamento</div>
-          <div class="controle-grupo-grid">
-            <div><label>Propostas</label><input type="number" min="0" id="cProp" value="0"></div>
-            <div><label>Avaliações</label><input type="number" min="0" id="cAvaliados" value="0"></div>
-          </div>
-        </div>
-
-        <div class="controle-grupo">
-          <div class="controle-grupo-titulo">📸 Dados do Instagram <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">— números atuais da conta hoje (não somam, é o total do dia)</span></div>
-          <div class="controle-grupo-grid">
-            <div><label>Seguidores</label><input type="number" min="0" id="cSeg" placeholder="0"></div>
-            <div><label>Painel Profissional</label><input type="number" min="0" id="cPainel" placeholder="0"></div>
-            <div><label>Insights do Criador</label><input type="number" min="0" id="cInsights" placeholder="0"></div>
-            <div><label>Posts</label><input type="number" min="0" id="cPosts" placeholder="0"></div>
-            <div><label>Seguidores Líquidos <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">(ganhos − perdidos no dia)</span></label><input type="number" id="cSegLiquido" placeholder="0"></div>
-            <div><label>Interações</label><input type="number" min="0" id="cInteracoes" placeholder="0"></div>
-          </div>
-        </div>
-
-        <div style="flex-basis:100%;margin-top:4px;"><button class="primary" type="submit">Salvar dia</button></div>
-      </form>
-    </div>
-
-    <div class="panel">
-      <h2>😊 Humor do Dia <span>registre quantas vezes quiser — a cada oportunidade, cliente ou ligação</span></h2>
-      <div class="humor-btns-row">
-        <button class="humor-btn humor-triste" onclick="registrarHumor(1)">
-          <span class="humor-emoji-wrap">
-            <svg class="humor-face" viewBox="0 0 100 100">
-              <defs>
-                <radialGradient id="faceTriste" cx="35%" cy="28%" r="80%">
-                  <stop offset="0%" stop-color="#FFEA9E"/>
-                  <stop offset="100%" stop-color="#F0A93B"/>
-                </radialGradient>
-              </defs>
-              <ellipse cx="50" cy="92" rx="26" ry="5" fill="#000" opacity=".14"/>
-              <circle cx="50" cy="50" r="40" fill="url(#faceTriste)" stroke="#C97A1F" stroke-width="2.5"/>
-              <path d="M20 38 L34 44" stroke="#4A3420" stroke-width="4" stroke-linecap="round"/>
-              <path d="M80 38 L66 44" stroke="#4A3420" stroke-width="4" stroke-linecap="round"/>
-              <circle cx="32" cy="50" r="6" fill="#3A2C1D"/>
-              <circle cx="68" cy="50" r="6" fill="#3A2C1D"/>
-              <circle cx="34" cy="48" r="1.8" fill="#fff"/>
-              <circle cx="70" cy="48" r="1.8" fill="#fff"/>
-              <path d="M30 74 Q50 62 70 74" stroke="#7A3B1F" stroke-width="5" fill="none" stroke-linecap="round"/>
-              <path class="humor-lagrima" d="M30 56 Q26 66 30 72 Q34 66 30 56 Z" fill="#4FC3F7"/>
-            </svg>
-          </span>
-          <span>Triste</span>
-        </button>
-        <button class="humor-btn humor-indiferente" onclick="registrarHumor(2)">
-          <span class="humor-emoji-wrap">
-            <svg class="humor-face" viewBox="0 0 100 100">
-              <defs>
-                <radialGradient id="faceIndif" cx="35%" cy="28%" r="80%">
-                  <stop offset="0%" stop-color="#FFEA9E"/>
-                  <stop offset="100%" stop-color="#E8B84A"/>
-                </radialGradient>
-              </defs>
-              <ellipse cx="50" cy="92" rx="26" ry="5" fill="#000" opacity=".14"/>
-              <circle cx="50" cy="50" r="40" fill="url(#faceIndif)" stroke="#C99A2E" stroke-width="2.5"/>
-              <path d="M22 40 L38 40" stroke="#4A3420" stroke-width="4" stroke-linecap="round"/>
-              <path d="M78 40 L62 40" stroke="#4A3420" stroke-width="4" stroke-linecap="round"/>
-              <ellipse cx="32" cy="50" rx="6" ry="3" fill="#3A2C1D"/>
-              <ellipse cx="68" cy="50" rx="6" ry="3" fill="#3A2C1D"/>
-              <path d="M33 74 L67 74" stroke="#7A3B1F" stroke-width="5" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <span>Indiferente</span>
-        </button>
-        <button class="humor-btn humor-feliz" onclick="registrarHumor(3)">
-          <span class="humor-emoji-wrap">
-            <svg class="humor-face" viewBox="0 0 100 100">
-              <defs>
-                <radialGradient id="faceFeliz" cx="35%" cy="28%" r="80%">
-                  <stop offset="0%" stop-color="#FFF3B0"/>
-                  <stop offset="100%" stop-color="#FFA733"/>
-                </radialGradient>
-              </defs>
-              <ellipse cx="50" cy="92" rx="26" ry="5" fill="#000" opacity=".14"/>
-              <circle cx="50" cy="50" r="40" fill="url(#faceFeliz)" stroke="#E8890C" stroke-width="2.5"/>
-              <ellipse cx="24" cy="60" rx="7" ry="4.5" fill="#FF8FA3" opacity=".6"/>
-              <ellipse cx="76" cy="60" rx="7" ry="4.5" fill="#FF8FA3" opacity=".6"/>
-              <path d="M18 42 Q28 28 38 42" stroke="#3A2C1D" stroke-width="5" fill="none" stroke-linecap="round"/>
-              <path d="M62 42 Q72 28 82 42" stroke="#3A2C1D" stroke-width="5" fill="none" stroke-linecap="round"/>
-              <path d="M26 60 Q50 96 74 60 Q50 80 26 60 Z" fill="#7A2E1F"/>
-              <path d="M36 68 Q50 80 64 68" fill="#fff" opacity=".92"/>
-              <path d="M40 68 Q50 74 60 68" fill="#E85D75"/>
-            </svg>
-          </span>
-          <span>Feliz</span>
-        </button>
-      </div>
-      <div class="humor-resumo-hoje" id="humorResumoHoje"></div>
-    </div>
-    <div class="panel">
-      <h2>Histórico do mês</h2>
-      <div class="table-wrap">
-        <table id="controleTable">
-          <thead><tr><th>Data</th><th>Dia</th><th>Lig. Total</th><th>Inválidos</th><th>Não Atend.</th><th>Atend. c/ Interesse</th><th>Atend. s/ Interesse</th><th>Wpp</th><th>Stories</th><th>Reels</th><th>Feed</th><th>Ofertas</th><th>Leads/Clientes Novos</th><th>Retornos</th><th>Visitas</th><th>Test Drives</th><th>Propostas</th><th>Vendas</th><th>Avaliados</th><th>Metas</th><th>Lançamentos</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
+      <h2>Calendário de atividade <span>🟢 dia com venda</span></h2>
+      <div id="calBox"></div>
     </div>
   </section>
 
@@ -652,100 +349,6 @@
 
   <!-- CLIENTES -->
   <section id="view-clientes" class="view">
-    <div class="panel">
-      <h2>🧾 Propostas do Mês <span>cadastre cada proposta com os dados completos do veículo e do financiamento</span></h2>
-      <form class="inline" id="formProposta">
-        <input type="hidden" id="pEditId" value="">
-        <div><label>Nome do Cliente</label><input type="text" id="pCliente" required></div>
-        <div><label>WhatsApp</label><input type="text" id="pWhats"></div>
-        <div>
-          <label>Atendido por</label>
-          <select id="pOrigem">
-            <option>Instagram</option><option>Facebook</option><option>Indicação</option>
-            <option>Oficina</option><option>Site</option><option>WhatsApp</option>
-            <option>Loja Física</option><option>Anúncio</option><option>Lead</option><option>Outro</option>
-          </select>
-        </div>
-        <div><label>Data</label><input type="date" id="pData" required></div>
-
-        <div>
-          <label>Tipo de Veículo</label>
-          <select id="pTipoVeiculo">
-            <option value="0KM">Carro 0KM</option>
-            <option value="Seminovo">Seminovo</option>
-          </select>
-        </div>
-        <div>
-          <label>Modalidade</label>
-          <select id="pModalidade">
-            <option value="Varejo">Varejo</option>
-            <option value="VD CNPJ">VD CNPJ</option>
-            <option value="VD Produtor Rural">VD Produtor Rural</option>
-            <option value="VD PCD">VD PCD</option>
-          </select>
-        </div>
-        <div>
-          <label>Carro</label>
-          <select id="pCarro">
-            <option>POLO</option><option>SAVEIRO</option><option>TERA</option><option>NIVUS</option>
-            <option>VIRTUS</option><option>JETTA</option><option>TCROSS</option><option>TAOS</option><option>TIGUAN</option><option>AMAROK</option>
-          </select>
-        </div>
-        <div><label>Versão</label><input type="text" id="pVersao"></div>
-        <div><label>Cor</label><input type="text" id="pCor"></div>
-        <div><label>Ano Fabricação</label><input type="number" id="pAnoFab" placeholder="Ex: 2025" min="1990" max="2035"></div>
-        <div><label>Ano Modelo</label><input type="number" id="pAnoModelo" placeholder="Ex: 2026" min="1990" max="2035"></div>
-        <div id="pKmWrap" style="display:none;"><label>KM (quilometragem)</label><input type="number" id="pKm" placeholder="Ex: 32000" min="0"></div>
-        <div><label>Pacotes do Veículo</label><input type="text" id="pPacotes" placeholder="Ex: Pacote Conforto, Rodas de Liga, Teto Solar..."></div>
-
-        <div><label>Valor de Tabela (R$)</label><input type="text" inputmode="decimal" id="pCota" placeholder="0,00"></div>
-        <div><label>Valor do Carro com Desconto (R$)</label><input type="text" inputmode="decimal" id="pValorCarro" placeholder="0,00"></div>
-
-        <div><label>Desconto Nota Fiscal (R$)</label><input type="text" inputmode="decimal" id="pDescontoNF" placeholder="0,00"></div>
-        <div><label>Bônus de Varejo (R$)</label><input type="text" inputmode="decimal" id="pBonusVarejo" placeholder="0,00"></div>
-        <div><label>Bônus Troca (R$)</label><input type="text" inputmode="decimal" id="pBonusTroca" placeholder="0,00"></div>
-        <div><label>Avaliação do Veículo Troca (R$)</label><input type="text" inputmode="decimal" id="pAvaliacaoTroca" placeholder="0,00"></div>
-        <div><label>Avaliação do Veículo de Troca (Ideia) (R$)</label><input type="text" inputmode="decimal" id="pAvaliacaoTrocaIdeia" placeholder="0,00"></div>
-
-        <div style="grid-column:1/-1;">
-          <label>Observação / Justificativa do Bônus de Fábrica</label>
-          <textarea id="pObsBonusFabrica" rows="4" placeholder="Descreva aqui o motivo/justificativa do bônus de fábrica aplicado nessa proposta...">Observação: Os descontos informados nesta proposta correspondem às campanhas oficiais da Volkswagen. Em determinadas negociações, é possível oferecer condições comerciais ainda mais atrativas, proporcionando um valor final ainda melhor para a compra do seu veículo.</textarea>
-        </div>
-
-        <div style="grid-column:1/-1;">
-          <label>🔒 Produtos do Financiamento <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">— só pra você ver no sistema, não aparece no card impresso pro cliente. Pode marcar mais de um produto.</span></label>
-          <div id="pProdutosFinanciamentoBox" style="background:var(--card-tint);border:1px solid var(--border-light);border-radius:10px;padding:12px 14px;"></div>
-          <div style="margin-top:8px;font-size:12.5px;font-weight:800;color:var(--orange-deep);">Total de pontos dos produtos: <span id="pProdutosPontosTotal">0</span></div>
-        </div>
-
-        <div>
-          <label>Mês (IPVA) <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">— janeiro 3% caindo 0,25%/mês</span></label>
-          <select id="pIpvaMes"><option value="">Selecione</option></select>
-        </div>
-        <div><label>IPVA (R$)</label><input type="text" id="pIpva" readonly placeholder="0,00" style="background:var(--card-tint);font-weight:800;"></div>
-        <div><label>Emplacamento (R$)</label><input type="text" inputmode="decimal" id="pEmplacamento" placeholder="0,00"></div>
-        <div><label>IPVA + Emplacamento</label><input type="text" id="pIpvaEmplacTotal" readonly placeholder="0,00" style="background:var(--card-tint);font-weight:800;color:var(--orange-deep);"></div>
-        <div style="display:flex;flex-direction:column;justify-content:flex-end;">
-          <label>&nbsp;</label>
-          <button type="button" class="ghost" id="pBtnCortesia">🎁 Cortesia</button>
-        </div>
-
-        <div style="grid-column:1/-1;">
-          <label>Opções de Financiamento <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">— taxa mensal, entrada, valor financiado e a prestação daquela opção. Adicione quantas opções esse modelo tiver.</span></label>
-          <div id="pTaxasContainer"></div>
-          <button type="button" class="ghost" id="btnAddTaxa">+ Adicionar opção de financiamento</button>
-        </div>
-
-        <div style="grid-column:1/-1;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-          <button class="primary" type="submit" id="pBtnSubmit">Salvar proposta</button>
-          <button class="ghost" type="button" id="pBtnCancelarEdicao" style="display:none;">Cancelar edição</button>
-        </div>
-      </form>
-    </div>
-    <div class="panel">
-      <h2>Propostas cadastradas <span id="propostasCount"></span></h2>
-      <div id="propostasBox"></div>
-    </div>
     <div class="panel">
       <h2>Novo cliente / pedido</h2>
       <form class="inline" id="formCliente">
@@ -1084,165 +687,7 @@
     </div>
   </section>
 
-  <!-- DOCUMENTOS -->
-  <section id="view-documentos" class="view">
-    <div class="panel">
-      <h2 style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <span>📄 Documentos <span>preencha, salve em PDF ou imprima direto pelo sistema</span></span>
-        <button type="button" class="ghost" id="btnVoltarConfigDoDocumentos" style="width:auto;">← Voltar</button>
-      </h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button type="button" class="post-check-pill pill-ativo" data-doc="procuracao">Procuração (Representação)</button>
-        <button type="button" class="post-check-pill" data-doc="autorizacao">Autorização de Entrega a Terceiro</button>
-        <button type="button" class="post-check-pill" data-doc="retirada">Retirada de Veículo Sem Placa</button>
-        <button type="button" class="post-check-pill" data-doc="pedidovd">Pedido de Compra VD</button>
-      </div>
-    </div>
-
-    <!-- PROCURAÇÃO -->
-    <div class="panel doc-painel" id="docPainel-procuracao">
-      <h2>🖋️ Procuração (Representação) <span>GRT</span></h2>
-      <div class="doc-form-grid">
-        <div><label>Nome do proprietário/adquirente</label><input type="text" id="doc-proc-nome"></div>
-        <div><label>CPF</label><input type="text" id="doc-proc-cpf"></div>
-        <div><label>CI (Carteira de Identidade) nº</label><input type="text" id="doc-proc-ci"></div>
-        <div><label>Veículo</label><input type="text" id="doc-proc-veiculo" placeholder="Ex: Polo Track"></div>
-        <div><label>Chassi</label><input type="text" id="doc-proc-chassi"></div>
-        <div><label>Placas</label><input type="text" id="doc-proc-placas"></div>
-      </div>
-
-      <div style="margin-top:14px;">
-        <label style="display:block;font-size:11px;font-weight:800;color:var(--graphite);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;">Processo(s) a encaminhar <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">— marque quantos precisar</span></label>
-        <div class="doc-check-grid" id="doc-proc-processos"></div>
-      </div>
-
-      <div class="doc-form-grid" style="margin-top:14px;">
-        <div><label>Data da assinatura</label><input type="date" id="doc-proc-data"></div>
-      </div>
-
-      <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border-light);">
-        <label style="display:block;font-size:11px;font-weight:800;color:var(--graphite);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;">Dados do adquirente/proprietário</label>
-        <div class="doc-form-grid">
-          <div style="grid-column:1/-1;"><label>Endereço</label><input type="text" id="doc-proc-endereco"></div>
-          <div><label>Telefone celular</label><input type="text" id="doc-proc-tel"></div>
-          <div><label class="post-check-pill" style="display:inline-flex;"><input type="checkbox" id="doc-proc-semtel" style="width:auto;"> Não possui celular</label></div>
-          <div><label>Email</label><input type="text" id="doc-proc-email"></div>
-          <div><label class="post-check-pill" style="display:inline-flex;"><input type="checkbox" id="doc-proc-sememail" style="width:auto;"> Não possui email</label></div>
-          <div>
-            <label>Autoriza o DETRAN/RS a enviar informações por email/celular?</label>
-            <select id="doc-proc-autoriza"><option value="SIM">Sim</option><option value="NAO">Não</option></select>
-          </div>
-        </div>
-      </div>
-
-      <div style="margin-top:16px;"><button type="button" class="primary" id="btnImprimirDocProcuracao">🖨️ Salvar PDF / Imprimir</button></div>
-    </div>
-
-    <!-- AUTORIZAÇÃO DE ENTREGA A TERCEIRO -->
-    <div class="panel doc-painel" id="docPainel-autorizacao" style="display:none;">
-      <h2>🔑 Autorização de Entrega de Veículo a Terceiro</h2>
-      <div style="font-size:11px;font-weight:800;color:var(--orange-deep);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;">Proprietário</div>
-      <div class="doc-form-grid">
-        <div><label>Nome do proprietário</label><input type="text" id="doc-aut-nome"></div>
-        <div><label>RG/IE</label><input type="text" id="doc-aut-rg"></div>
-        <div><label>CPF/CNPJ</label><input type="text" id="doc-aut-cpf"></div>
-        <div><label>Veículo</label><input type="text" id="doc-aut-veiculo" placeholder="Ex: Polo Track"></div>
-        <div><label>Marca</label><input type="text" id="doc-aut-marca" value="Volkswagen"></div>
-        <div><label>Ano fabricação</label><input type="text" id="doc-aut-anofab" placeholder="Ex: 2025"></div>
-        <div><label>Ano modelo</label><input type="text" id="doc-aut-anomod" placeholder="Ex: 2026"></div>
-        <div><label>Cor</label><input type="text" id="doc-aut-cor"></div>
-        <div><label>Chassi</label><input type="text" id="doc-aut-chassi"></div>
-        <div><label>Placa</label><input type="text" id="doc-aut-placa"></div>
-      </div>
-      <div style="font-size:11px;font-weight:800;color:var(--orange-deep);text-transform:uppercase;letter-spacing:.3px;margin:16px 0 8px;">Pessoa autorizada a retirar</div>
-      <div class="doc-form-grid">
-        <div><label>Nome</label><input type="text" id="doc-aut-terc-nome"></div>
-        <div><label>RG/IE</label><input type="text" id="doc-aut-terc-rg"></div>
-        <div><label>CPF/CNPJ</label><input type="text" id="doc-aut-terc-cpf"></div>
-        <div><label>Data da assinatura</label><input type="date" id="doc-aut-data"></div>
-      </div>
-      <div style="margin-top:16px;"><button type="button" class="primary" id="btnImprimirDocAutorizacao">🖨️ Salvar PDF / Imprimir</button></div>
-    </div>
-
-    <!-- RETIRADA SEM PLACA -->
-    <div class="panel doc-painel" id="docPainel-retirada" style="display:none;">
-      <h2>🚗 Declaração — Retirada de Veículo Sem Placa</h2>
-      <div class="doc-form-grid">
-        <div><label>Nome do cliente</label><input type="text" id="doc-ret-nome"></div>
-        <div><label>RG</label><input type="text" id="doc-ret-rg"></div>
-        <div><label>CPF</label><input type="text" id="doc-ret-cpf"></div>
-        <div><label>Veículo</label><input type="text" id="doc-ret-veiculo" placeholder="Ex: Polo Track"></div>
-        <div><label>Chassi</label><input type="text" id="doc-ret-chassi"></div>
-        <div><label>Data da assinatura</label><input type="date" id="doc-ret-data"></div>
-      </div>
-      <div style="margin-top:16px;"><button type="button" class="primary" id="btnImprimirDocRetirada">🖨️ Salvar PDF / Imprimir</button></div>
-    </div>
-
-    <!-- PEDIDO DE COMPRA VD -->
-    <div class="panel doc-painel" id="docPainel-pedidovd" style="display:none;">
-      <h2>📝 Pedido de Compra — Comprador Especial (VD)</h2>
-      <div style="font-size:11px;font-weight:800;color:var(--orange-deep);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;">Comprador Especial</div>
-      <div class="doc-form-grid">
-        <div style="grid-column:span 2;"><label>Nome / Razão Social</label><input type="text" id="doc-vd-nome"></div>
-        <div><label>CPF/CNPJ Faturamento</label><input type="text" id="doc-vd-cpf"></div>
-        <div><label>CNPJ Matriz <span style="font-weight:500;color:var(--text-mute);text-transform:none;">(se faturar por filial)</span></label><input type="text" id="doc-vd-cnpjmatriz"></div>
-        <div><label>Inscrição Estadual</label><input type="text" id="doc-vd-ie"></div>
-        <div><label>UF</label><input type="text" id="doc-vd-uf" value="RS" maxlength="2"></div>
-      </div>
-      <div style="font-size:11px;font-weight:800;color:var(--orange-deep);text-transform:uppercase;letter-spacing:.3px;margin:16px 0 8px;">Concessionário (fixo)</div>
-      <div class="doc-form-grid">
-        <div><label>DN - Dealer Number</label><input type="text" id="doc-vd-dn" value="83" readonly></div>
-        <div><label>Nome</label><input type="text" id="doc-vd-dnnome" value="Motomecânica" readonly></div>
-      </div>
-
-      <div style="font-size:11px;font-weight:800;color:var(--orange-deep);text-transform:uppercase;letter-spacing:.3px;margin:16px 0 8px;">Especificações do veículo</div>
-      <div class="doc-form-grid">
-        <div><label>Modelo (código)</label><input type="text" id="doc-vd-modelo" placeholder="Ex: BF3PB3"></div>
-        <div><label>Cor (código)</label><input type="text" id="doc-vd-cor" placeholder="Ex: K2K2"></div>
-        <div><label>Opcionais</label><input type="text" id="doc-vd-opcionais"></div>
-        <div><label>Desconto (R$)</label><input type="text" inputmode="numeric" id="doc-vd-desconto" placeholder="0,00"></div>
-        <div><label>Preço Referência Unitário (R$)</label><input type="text" inputmode="numeric" id="doc-vd-preco" placeholder="0,00"></div>
-      </div>
-
-      <div class="doc-form-grid" style="margin-top:14px;">
-        <div>
-          <label>Forma de pagamento</label>
-          <select id="doc-vd-pagamento">
-            <option value="À VISTA">À Vista</option><option value="LEASING">Leasing</option>
-            <option value="CDC">CDC</option><option value="CONSÓRCIO">Consórcio</option>
-          </select>
-        </div>
-        <div>
-          <label>Cláusula de assinatura conjunta dos sócios?</label>
-          <select id="doc-vd-clausula"><option value="NAO">Não</option><option value="SIM">Sim</option></select>
-        </div>
-        <div>
-          <label>Pessoa Exposta Politicamente?</label>
-          <select id="doc-vd-pep"><option value="NAO">Não</option><option value="SIM">Sim</option></select>
-        </div>
-        <div style="grid-column:1/-1;"><label>Se sim, descreva o motivo</label><input type="text" id="doc-vd-pep-motivo"></div>
-      </div>
-
-      <div style="font-size:11px;font-weight:800;color:var(--orange-deep);text-transform:uppercase;letter-spacing:.3px;margin:16px 0 8px;">Assinaturas</div>
-      <div class="doc-form-grid">
-        <div><label>Comprador — Nome</label><input type="text" id="doc-vd-comp1-nome"></div>
-        <div><label>Comprador — CPF</label><input type="text" id="doc-vd-comp1-cpf"></div>
-        <div><label>2º Comprador — Nome <span style="font-weight:500;color:var(--text-mute);text-transform:none;">(opcional)</span></label><input type="text" id="doc-vd-comp2-nome"></div>
-        <div><label>2º Comprador — CPF</label><input type="text" id="doc-vd-comp2-cpf"></div>
-        <div><label>Testemunha — Nome <span style="font-weight:500;color:var(--text-mute);text-transform:none;">(opcional)</span></label><input type="text" id="doc-vd-test-nome"></div>
-        <div><label>Testemunha — CPF</label><input type="text" id="doc-vd-test-cpf"></div>
-        <div><label>Responsável pela Venda — Nome</label><input type="text" id="doc-vd-vendedor-nome"></div>
-        <div><label>Responsável pela Venda — CPF</label><input type="text" id="doc-vd-vendedor-cpf"></div>
-      </div>
-      <div style="margin-top:16px;"><button type="button" class="primary" id="btnImprimirDocPedidoVD">🖨️ Salvar PDF / Imprimir</button></div>
-    </div>
-  </section>
-
   <section id="view-config" class="view">
-    <div class="panel">
-      <h2>📄 Documentos <span>procuração, autorizações e pedido de compra, prontos pra preencher</span></h2>
-      <button type="button" class="primary" id="btnAbrirDocumentos" style="width:auto;">📄 Abrir Documentos</button>
-    </div>
     <div class="panel">
       <h2>Configurações gerais</h2>
       <p style="font-size:12.5px;color:var(--grey-dark);margin-top:-6px;">A comissão é calculada automaticamente em cada venda (aba 💵 Vendas): 0,5% para carro 0KM, 0,7% para seminovo, 1% para consórcio, 0,3% para repasses, e a taxa configurada abaixo para Venda Direta (VD). Se marcar emplacamento "Sim", soma R$ 50,00 ao total.</p>
@@ -1255,13 +700,6 @@
         <div><label>Meta de vendas - Repasses</label><input type="number" min="0" id="cfgMetaRepasse"></div>
         <div><label>🎯 Meta Volks do Mês (carros) <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">— quantos carros a VW pediu de meta pra concessionária esse mês</span></label><input type="number" min="0" id="cfgMetaVolksCarros"></div>
         <div><label>👥 Vendedores Aptos <span style="font-weight:500;color:var(--text-mute);text-transform:none;letter-spacing:0;">— quantos vendedores vão dividir essa meta</span></label><input type="number" min="1" id="cfgMetaVolksVendedores"></div>
-        <div><label>Meta diária - Ligações</label><input type="number" min="0" id="cfgLig"></div>
-        <div><label>Meta diária - WhatsApp</label><input type="number" min="0" id="cfgWpp"></div>
-        <div><label>Meta diária - Stories</label><input type="number" min="0" id="cfgSto"></div>
-        <div><label>Meta diária - Reels</label><input type="number" min="0" id="cfgRee"></div>
-        <div><label>Meta diária - Postagem no Feed</label><input type="number" min="0" id="cfgFeed"></div>
-        <div><label>Meta diária - Ofertas do Mês</label><input type="number" min="0" id="cfgOfe"></div>
-        <div><label>Dias sem contato para alerta</label><input type="number" min="1" id="cfgAlerta"></div>
         <div><label>Comissão Venda Direta - VD (%)</label><input type="number" min="0" step="0.01" id="cfgTaxaVD"></div>
         <div><label>Nome do vendedor</label><input type="text" id="cfgVendedor"></div>
         <div><label>Concessionária</label><input type="text" id="cfgConc"></div>
@@ -1279,19 +717,6 @@
       <h2>💰 Salários e Ponto</h2>
       <p style="font-size:13px;color:var(--grey-dark)">Registre seus salários (banco, cartão, prêmios) e marque suas horas de entrada/saída, incluindo horas extras e viagens a trabalho.</p>
       <button class="primary" id="btnAbrirSalarios">💰 Salários</button>
-    </div>
-    <div class="panel">
-      <h2>📞 Roteiro de Ligações</h2>
-      <p style="font-size:13px;color:var(--grey-dark)">Gera uma folha pronta pra imprimir (cabe numa folha A4), com o script de abordagem e um quadro pra marcar suas ligações uma a uma. Você pode editar as mensagens abaixo antes de gerar.</p>
-      <div style="margin-bottom:16px;">
-        <label style="display:block;font-size:11px;font-weight:800;color:var(--graphite);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;">Mensagem da Ligação</label>
-        <textarea id="cfgRoteiroLigacao" rows="5" style="width:100%;"></textarea>
-      </div>
-      <div style="margin-bottom:16px;">
-        <label style="display:block;font-size:11px;font-weight:800;color:var(--graphite);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;">Mensagem do WhatsApp</label>
-        <textarea id="cfgRoteiroWhats" rows="5" style="width:100%;"></textarea>
-      </div>
-      <button class="primary" id="btnRoteiroLigacoes">📞 Baixar Roteiro de Ligações</button>
     </div>
     <div class="panel">
       <h2>📅 Dias Úteis e Feriados</h2>
@@ -1438,12 +863,6 @@
 <footer>CRM - Motomecânica Volkswagen — dados sincronizados em tempo real com o Supabase.</footer>
 </div>
 <!-- /appShell: escondido até a sessão do Supabase Auth ser confirmada (ver auth.js) -->
-
-<div id="propostaModalOverlay" class="proposta-modal-overlay" onclick="if(event.target===this) fecharPropostaModal();">
-  <div class="proposta-modal-box">
-    <div id="propostaModalContent"></div>
-  </div>
-</div>
 
 <div id="relatorioOverlay" class="proposta-modal-overlay" onclick="if(event.target===this) fecharRelatorio();">
   <div class="proposta-modal-box" style="max-width:720px;">
@@ -1672,16 +1091,16 @@
   </div>
 </div>
 
-<script src="js/vendedores.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/supabase.js"></script>
-<script src="js/clientes.js"></script>
-<script src="js/propostas.js"></script>
-<script src="js/estoque.js"></script>
-<script src="js/utils.js"></script>
 <!-- "?v=" evita que o navegador/CDN sirva uma cópia antiga em cache depois de um deploy;
-     mude esse valor sempre que crm.js ou app.js forem alterados. -->
-<script src="js/crm.js?v=20260816-1"></script>
-<script src="js/app.js?v=20260816-1"></script>
+     mude esse valor em TODOS os scripts sempre que qualquer um deles for alterado. -->
+<script src="js/vendedores.js?v=20260820-1"></script>
+<script src="js/auth.js?v=20260820-1"></script>
+<script src="js/supabase.js?v=20260820-1"></script>
+<script src="js/clientes.js?v=20260820-1"></script>
+<script src="js/propostas.js?v=20260820-1"></script>
+<script src="js/estoque.js?v=20260820-1"></script>
+<script src="js/utils.js?v=20260820-1"></script>
+<script src="js/crm.js?v=20260820-1"></script>
+<script src="js/app.js?v=20260820-1"></script>
 </body>
 </html>

@@ -1,13 +1,10 @@
 /* ============================= ESTADO ============================= */
 const DEFAULT_STATE = {
   config: {
-    mesRef: new Date().toISOString().slice(0,7),
+    mesRef: todayISO().slice(0,7),
     metaVendas: 12, comissaoCarro: 800, taxaVD: 0.5,
-    metaSeminovos: 3, metaConsorcios: 2, metaVD: 2, metaRepasses: 2, metaSeguidores: 3000, metaSalario: 10000,
-    metaLig: 30, metaWpp: 30, metaStories: 10, metaReels: 2, metaFeed: 8, metaOfertas: 4,
+    metaSeminovos: 3, metaConsorcios: 2, metaVD: 2, metaRepasses: 2, metaSalario: 10000,
     diasAlerta: 7, vendedor: "", concessionaria: "Volkswagen",
-    roteiroLigacaoMsg: "Olá, tudo bem?\n\nAqui é o {vendedor} da Motomecânica Volkswagen de Lajeado.\n\nEstou ligando porque estamos com ótimas ofertas de carros zero km esse mês.\n\nTeria interesse em conhecer uma proposta sem compromisso?",
-    roteiroWhatsMsg: "Olá! Aqui é o {vendedor}, da Motomecânica Volkswagen de Lajeado 🚗\n\nVi que você tem interesse em conhecer nossos carros 0KM. Esse mês estamos com condições especiais — posso te enviar uma proposta sem compromisso?"
   },
   dias: {},      // { [vendedorId]: { "2026-07-01": [{lig,wpp,sto,ree,nov,ret,vis,td,prop,ven,...}] } }
   clientes: [],  // { id, nome, tel, cidade, veiculo, valor, origem, ultimoContato, obs, vendedorId }
@@ -20,7 +17,7 @@ const DEFAULT_STATE = {
   feriadosCustom: [], // { data: "2026-01-26", nome: "Aniversário de Lajeado" }
   aniversarios: [], // { id, data: "MM-DD", nome, whats, obs }
   postagens: [],
-  metasPorVendedor: {}, // { [vendedorId]: {metaVendas, comissaoCarro, taxaVD, metaSeminovos, metaConsorcios, metaVD, metaRepasses, metaSeguidores, metaSalario, metaLig, metaWpp, metaStories, metaReels, metaFeed, metaOfertas, diasAlerta} }
+  metasPorVendedor: {}, // { [vendedorId]: {metaVendas, comissaoCarro, taxaVD, metaSeminovos, metaConsorcios, metaVD, metaRepasses, metaSalario, diasAlerta} }
 };
 
 // Campos de meta que passam a ser por vendedor (cada um define a própria) —
@@ -28,8 +25,7 @@ const DEFAULT_STATE = {
 // usados como ponto de partida quando um vendedor ainda não configurou a própria meta.
 const DEFAULT_METAS_VENDEDOR = {
   metaVendas: 12, comissaoCarro: 800, taxaVD: 0.5,
-  metaSeminovos: 3, metaConsorcios: 2, metaVD: 2, metaRepasses: 2, metaSeguidores: 3000, metaSalario: 10000,
-  metaLig: 30, metaWpp: 30, metaStories: 10, metaReels: 2, metaFeed: 8, metaOfertas: 4,
+  metaSeminovos: 3, metaConsorcios: 2, metaVD: 2, metaRepasses: 2, metaSalario: 10000,
   diasAlerta: 7,
 };
 
@@ -150,7 +146,6 @@ function aplicarAjustesDeCompatibilidade(){
   state.metasPorVendedor = state.metasPorVendedor || {};
   inicializarEstadoGerente();
   inicializarEstadoBancoVW();
-  inicializarEstadoDocumentos();
   // troca automaticamente pro mês/ano atual toda vez que o sistema é aberto —
   // o seletor no cabeçalho continua disponível pra navegar até meses anteriores durante a sessão
   state.config.mesRef = todayISO().slice(0,7);
@@ -294,8 +289,6 @@ document.getElementById("btnCriarVendedor").addEventListener("click", async ()=>
 
 document.getElementById("btnCompMes").addEventListener("click", ()=>{ competicaoCarrosEscopo="mes"; renderCompeticaoCarros(); });
 document.getElementById("btnCompGeral").addEventListener("click", ()=>{ competicaoCarrosEscopo="geral"; renderCompeticaoCarros(); });
-document.getElementById("btnRelatorioLigacoesPdf").addEventListener("click", imprimirRelatorioLigacoes);
-document.addEventListener("keydown", e=>{ if (e.key==="Escape") fecharPropostaModal(); });
 document.getElementById("btnGerarExtratoSalario").addEventListener("click", gerarExtratoSalarioPeriodo);
 document.getElementById("btnVerificarDuplicados").addEventListener("click", ()=>{
   const salarios = filtrarPorVendedor(state.salarios || []); // só verifica/remove duplicados do próprio vendedor
@@ -460,108 +453,6 @@ document.getElementById("fipeTipo").addEventListener("change", fipeCarregarMarca
 document.getElementById("fipeMarca").addEventListener("change", fipeCarregarModelos);
 document.getElementById("fipeModelo").addEventListener("change", fipeCarregarAnos);
 document.getElementById("fipeAno").addEventListener("change", fipeConsultarPreco);
-document.getElementById("btnAbrirDocumentos").addEventListener("click", abrirDocumentos);
-document.getElementById("btnVoltarConfigDoDocumentos").addEventListener("click", ()=>{
-  document.querySelector('nav button[data-view="config"]').click();
-});
-document.querySelectorAll('[data-doc]').forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll('[data-doc]').forEach(b=>b.classList.remove("pill-ativo"));
-    btn.classList.add("pill-ativo");
-    document.querySelectorAll(".doc-painel").forEach(p=>p.style.display="none");
-    document.getElementById("docPainel-"+btn.dataset.doc).style.display="block";
-  });
-});
-document.querySelectorAll('#view-documentos input, #view-documentos select').forEach(el=>{
-  el.addEventListener("change", salvarCamposDocumentos);
-});
-
-document.getElementById("btnImprimirDocProcuracao").addEventListener("click", ()=>{
-  salvarCamposDocumentos();
-  const d = state.documentos.procuracao || {};
-  const dt = docFmtData(d["proc-data"]);
-  const processosMarcados = (d.processos||[]).map(idx=>DOC_PROCESSOS_PROCURACAO[idx]);
-  const corpo = `
-    <h1>Procuração (Representação)</h1>
-    <h2>GRT</h2>
-    <div class="linha">Eu, <span class="campo" style="min-width:280px;">${d["proc-nome"]||""}</span>, inscrito no CPF sob o número
-    <span class="campo">${d["proc-cpf"]||""}</span>, portador da CI número <span class="campo">${d["proc-ci"]||""}</span>,
-    proprietário/adquirente do veículo <span class="campo">${d["proc-veiculo"]||""}</span>, chassi
-    <span class="campo">${d["proc-chassi"]||""}</span>, de placas <span class="campo">${d["proc-placas"]||""}</span>,
-    nomeio e constituo como meu PROCURADOR o Sr. ${DOC_PROCURADORES_FIXOS.map(p=>`${p.nome}, Portador(a) do CPF: ${p.cpf}`).join(", ou Sr. ")},
-    para fins de encaminhar o(s) seguinte(s) processo(s) em meu nome:</div>
-
-    <div class="chk-list">${DOC_PROCESSOS_PROCURACAO.map(p=>`<div>${processosMarcados.includes(p)?"☑":"☐"} ${p}</div>`).join("")}</div>
-
-    <div style="margin-top:26px;">Lajeado, ${dt.dia} de ${dt.mes} de ${dt.ano}.</div>
-    <div class="assinatura-box" style="margin-top:40px;max-width:320px;">
-      <div class="assinatura-linha">Assinatura com firma reconhecida</div>
-    </div>
-
-    <div style="margin-top:26px;font-weight:700;font-size:11.5px;text-transform:uppercase;">Dados do adquirente (processos 101, 102 e 103) ou do proprietário (demais processos)</div>
-    <div class="grid2" style="margin-top:8px;font-size:12px;">
-      <div style="grid-column:1/-1;">Endereço: <span class="campo" style="min-width:400px;">${d["proc-endereco"]||""}</span></div>
-      <div>Telefone celular: <span class="campo">${d.semtel ? "não possui" : (d["proc-tel"]||"")}</span></div>
-      <div>Email: <span class="campo">${d.sememail ? "não possui" : (d["proc-email"]||"")}</span></div>
-      <div style="grid-column:1/-1;">Autorizo o DETRAN/RS a enviar por email ou telefone celular informações de interesse junto a este órgão: <b>${d.autoriza==="NAO"?"Não":"Sim"}</b></div>
-    </div>`;
-  abrirJanelaImpressaoDoc("Procuração", corpo);
-});
-
-document.getElementById("btnImprimirDocAutorizacao").addEventListener("click", ()=>{
-  salvarCamposDocumentos();
-  const d = state.documentos.autorizacao || {};
-  const dt = docFmtData(d["aut-data"]);
-  const corpo = `
-    <h1>Autorização de Entrega de Veículo a Terceiro</h1>
-    <div class="linha" style="text-align:justify;">Eu, <span class="campo" style="min-width:300px;">${d["aut-nome"]||""}</span>,
-    portador do RG/IE <span class="campo">${d["aut-rg"]||""}</span> e CPF/CNPJ <span class="campo">${d["aut-cpf"]||""}</span>,
-    proprietário do veículo <span class="campo">${d["aut-veiculo"]||""}</span>, marca <span class="campo">${d["aut-marca"]||"Volkswagen"}</span>,
-    ano fabricação/modelo <span class="campo" style="min-width:50px;">${d["aut-anofab"]||""}</span>/<span class="campo" style="min-width:50px;">${d["aut-anomod"]||""}</span>,
-    cor <span class="campo">${d["aut-cor"]||""}</span>, chassi <span class="campo">${d["aut-chassi"]||""}</span> e placa
-    <span class="campo">${d["aut-placa"]||""}</span>, autorizo o(a) Sr.(a) <span class="campo" style="min-width:280px;">${d["aut-terc-nome"]||""}</span>,
-    portador do RG/IE <span class="campo">${d["aut-terc-rg"]||""}</span> e CPF/CNPJ <span class="campo">${d["aut-terc-cpf"]||""}</span>
-    a retirar o veículo mencionado acima junto à concessionária Volkswagen MOTOMECÂNICA COMERCIAL DE VEICULOS S/A, inscrita no CNPJ 91.157.826/0001-14,
-    no que me responsabilizo civil, administrativamente bem como criminalmente pelo uso do veículo, isentando, assim, a MOTOMECÂNICA COMERCIAL S/A por todo
-    e quaisquer tipo de responsabilidade e/ou indenização por danos diretos e indiretos causados a terceiros e/ou a MOTOMECANICA COMERCIAL S/A.</div>
-
-    <div style="margin-top:30px;">Lajeado-RS, ${dt.dia} de ${dt.mes} de ${dt.ano}.</div>
-
-    <div class="assinaturas">
-      <div class="assinatura-box"><div class="assinatura-linha">Assinatura do Cliente</div></div>
-    </div>`;
-  abrirJanelaImpressaoDoc("Autorização de Entrega a Terceiro", corpo);
-});
-
-document.getElementById("btnImprimirDocRetirada").addEventListener("click", ()=>{
-  salvarCamposDocumentos();
-  const d = state.documentos.retirada || {};
-  const dt = docFmtData(d["ret-data"]);
-  const corpo = `
-    <h1>Declaração</h1>
-    <h2>Retirada de Veículo Sem Placa</h2>
-    <div class="linha" style="text-align:justify;">Eu, <span class="campo" style="min-width:300px;">${d["ret-nome"]||""}</span>,
-    portador do RG <span class="campo">${d["ret-rg"]||""}</span> e CPF <span class="campo">${d["ret-cpf"]||""}</span>,
-    declaro para os devidos fins de direito, que adquiri o veículo <span class="campo">${d["ret-veiculo"]||""}</span>, marca Volkswagen,
-    chassi <span class="campo">${d["ret-chassi"]||""}</span>, da Concessionária MOTOMECANICA COMERCIAL S/A, inscrita no CNPJ 91.157.826/0001-14
-    e nesta data estou retirando por minha livre e espontânea vontade, o referido veículo sem o devido emplacamento, tendo em vista que a
-    documentação está sendo providenciada pelo meu despachante.</div>
-    <div class="linha" style="text-align:justify;">Pela presente, me responsabilizo civil, administrativamente bem como criminalmente pelo uso do
-    veículo, isentando, ademais, a MOTOMECANICA COMERCIAL S/A por todo e qualquer dano direto ou indireto causado a MOTOMECANICA COMERCIAL S/A
-    e/ou terceiros, devendo, ademais, indenizar integralmente a MOTOMECANICA COMERCIAL S/A por eventual prejuízo causado.</div>
-
-    <div style="margin-top:30px;">Lajeado-RS, ${dt.dia} de ${dt.mes} de ${dt.ano}.</div>
-
-    <div class="assinaturas">
-      <div class="assinatura-box"><div class="assinatura-linha">Assinatura do Cliente</div></div>
-    </div>`;
-  abrirJanelaImpressaoDoc("Retirada de Veículo Sem Placa", corpo);
-});
-
-document.getElementById("btnImprimirDocPedidoVD").addEventListener("click", ()=>{
-  salvarCamposDocumentos();
-  imprimirDocPedidoVDFielExcel(state.documentos.pedidovd || {});
-});
 document.getElementById("btnAddFaixaPagina").addEventListener("click", ()=>{
   state.gerente.regrasConfig.paginasExcluir.push({de:null, ate:null});
   renderRegraPaginasBox();
@@ -654,93 +545,17 @@ document.getElementById("btnNavToggle").addEventListener("click", ()=>{
   document.getElementById("btnNavToggle").setAttribute("aria-expanded", aberto ? "true" : "false");
 });
 popularSeletorMesAno();
-popularProdutosFinanciamento();
 document.getElementById("headerMesSelect").addEventListener("change", mudarMesRefManual);
 document.getElementById("headerAnoSelect").addEventListener("change", mudarMesRefManual);
 
-document.getElementById("cData").value = todayISO();
-document.getElementById("cData").addEventListener("change", atualizarAvisoDiaControle);
 document.getElementById("clUlt").value = todayISO();
 document.getElementById("vData").value = todayISO();
 document.getElementById("vTipo").addEventListener("change", atualizarCamposVenda);
 atualizarCamposVenda();
-document.getElementById("pData").value = todayISO();
-document.getElementById("pTipoVeiculo").addEventListener("change", atualizarCamposProposta);
-atualizarCamposProposta();
 maskCurrency(document.getElementById("vValor"));
 maskCurrency(document.getElementById("vAcessorios"));
 maskCurrency(document.getElementById("vSeguro"));
 maskCurrency(document.getElementById("clVal"));
-maskCurrency(document.getElementById("pCota"));
-maskCurrency(document.getElementById("pValorCarro"));
-maskCurrency(document.getElementById("pDescontoNF"));
-maskCurrency(document.getElementById("pBonusVarejo"));
-maskCurrency(document.getElementById("pBonusTroca"));
-maskCurrency(document.getElementById("pAvaliacaoTroca"));
-maskCurrency(document.getElementById("pAvaliacaoTrocaIdeia"));
-maskCurrency(document.getElementById("pEmplacamento"));
-document.getElementById("pEmplacamento").addEventListener("input", updatePropostaTotal);
-document.getElementById("pEmplacamento").value = "1.400,00";
-document.getElementById("pBtnCortesia").addEventListener("click", ()=>{
-  cortesiaAtiva = !cortesiaAtiva;
-  document.getElementById("pBtnCortesia").classList.toggle("ativo", cortesiaAtiva);
-  document.getElementById("pBtnCortesia").textContent = cortesiaAtiva ? "🎁 Cortesia (ativada)" : "🎁 Cortesia";
-  updatePropostaTotal();
-});
-updatePropostaTotal();
-(function popularSelectIpvaMes(){
-  const sel = document.getElementById("pIpvaMes");
-  MESES_IPVA.forEach((m,i)=>{
-    const opt = document.createElement("option");
-    opt.value = i+1;
-    opt.textContent = `${m} (${IPVA_PCT_POR_MES[i].toFixed(2)}%)`;
-    sel.appendChild(opt);
-  });
-})();
-document.getElementById("pIpvaMes").addEventListener("change", updateIpva);
-document.getElementById("pValorCarro").addEventListener("input", ()=>{ updateAllValorEntrada(); updateIpva(); });
-document.getElementById("btnAddTaxa").addEventListener("click", ()=> addTaxaRow());
-document.getElementById("pTaxasContainer").addEventListener("click", (e)=>{
-  if (e.target.classList.contains("btnRemoveTaxa")){
-    const rows = document.querySelectorAll("#pTaxasContainer .taxa-row");
-    if (rows.length>1) e.target.closest(".taxa-row").remove();
-  }
-});
-document.getElementById("pTaxasContainer").addEventListener("change", (e)=>{
-  if (e.target.classList.contains("entradaPctInput")) updateValorEntrada(e.target.closest(".taxa-row"));
-});
-resetTaxasContainer();
-
-document.getElementById("formControle").addEventListener("submit", e=>{
-  e.preventDefault();
-  const k = document.getElementById("cData").value;
-  if (!k) return;
-  const entrada = {
-    ligInvalido:+document.getElementById("cLigInvalido").value||0,
-    ligNao:+document.getElementById("cLigNao").value||0,
-    ligAtendCom:+document.getElementById("cLigAtendCom").value||0,
-    ligAtendSem:+document.getElementById("cLigAtendSem").value||0,
-    wpp:+document.getElementById("cWpp").value||0,
-    sto:+document.getElementById("cSto").value||0, ree:+document.getElementById("cRee").value||0,
-    feed:+document.getElementById("cFeed").value||0,
-    ofe:+document.getElementById("cOfe").value||0,
-    nov:+document.getElementById("cNov").value||0, ret:+document.getElementById("cRet").value||0,
-    vis:+document.getElementById("cVis").value||0, td:+document.getElementById("cTd").value||0,
-    prop:+document.getElementById("cProp").value||0,
-    avaliados:+document.getElementById("cAvaliados").value||0,
-    seg:+document.getElementById("cSeg").value||0, painel:+document.getElementById("cPainel").value||0,
-    insights:+document.getElementById("cInsights").value||0, posts:+document.getElementById("cPosts").value||0,
-    segLiquido:+document.getElementById("cSegLiquido").value||0, interacoes:+document.getElementById("cInteracoes").value||0,
-    ts: Date.now(),
-  };
-  const diasVendedor = diasDoVendedor(currentVendedorPerfil && currentVendedorPerfil.id);
-  if (!diasVendedor[k]) diasVendedor[k] = [];
-  diasVendedor[k].push(entrada);
-  persist(); renderAll();
-  e.target.reset();
-  document.getElementById("cData").value = todayISO();
-  atualizarAvisoDiaControle();
-});
 
 document.getElementById("formVenda").addEventListener("submit", e=>{
   e.preventDefault();
@@ -877,89 +692,6 @@ document.getElementById("formAniversario").addEventListener("submit", e=>{
 });
 document.getElementById("btnCancelarEdicaoAniversario").addEventListener("click", limparFormAniversario);
 
-document.getElementById("formProposta").addEventListener("submit", e=>{
-  e.preventDefault();
-  const ipva = currencyToNumber(document.getElementById("pIpva").value);
-  const emplacamento = currencyToNumber(document.getElementById("pEmplacamento").value);
-  const editId = document.getElementById("pEditId").value;
-  const dadosProposta = {
-    data: document.getElementById("pData").value,
-    cliente: document.getElementById("pCliente").value,
-    whats: document.getElementById("pWhats").value,
-    origem: document.getElementById("pOrigem").value,
-    tipoVeiculo: document.getElementById("pTipoVeiculo").value,
-    modalidade: document.getElementById("pModalidade").value,
-    carro: document.getElementById("pCarro").value,
-    versao: document.getElementById("pVersao").value,
-    cor: document.getElementById("pCor").value,
-    anoFab: document.getElementById("pAnoFab").value,
-    anoModelo: document.getElementById("pAnoModelo").value,
-    km: document.getElementById("pTipoVeiculo").value==="Seminovo" ? document.getElementById("pKm").value : "",
-    pacotes: document.getElementById("pPacotes").value,
-    valorCota: currencyToNumber(document.getElementById("pCota").value),
-    valorCarro: currencyToNumber(document.getElementById("pValorCarro").value),
-    descontoNF: currencyToNumber(document.getElementById("pDescontoNF").value),
-    bonusVarejo: currencyToNumber(document.getElementById("pBonusVarejo").value),
-    bonusTroca: currencyToNumber(document.getElementById("pBonusTroca").value),
-    avaliacaoTroca: currencyToNumber(document.getElementById("pAvaliacaoTroca").value),
-    avaliacaoTrocaIdeia: currencyToNumber(document.getElementById("pAvaliacaoTrocaIdeia").value),
-    obsBonusFabrica: document.getElementById("pObsBonusFabrica").value,
-    produtosFinanciamentoKeys: coletarProdutosFinanciamentoSelecionados(),
-    produtosFinanciamentoPontos: [...document.querySelectorAll(".prod-financ-chk:checked")].reduce((s,c)=>s+parseFloat(c.dataset.pontos),0),
-    taxas: collectTaxas(),
-    ipvaMes: +document.getElementById("pIpvaMes").value || 0,
-    ipva: ipva,
-    emplacamento: emplacamento,
-    cortesia: cortesiaAtiva,
-    ipvaEmplacTotal: cortesiaAtiva ? 0 : ipva+emplacamento,
-  };
-  if (editId){
-    const idx = state.propostas.findIndex(p=>p.id===editId);
-    if (idx>-1) state.propostas[idx] = {...state.propostas[idx], ...dadosProposta};
-  } else {
-    state.propostas.push({
-      id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-      vendedorId: (currentVendedorPerfil && currentVendedorPerfil.id) || null,
-      ...dadosProposta,
-    });
-  }
-  persist(); renderAll();
-  e.target.reset();
-  document.getElementById("pEditId").value = "";
-  document.getElementById("pBtnSubmit").textContent = "Salvar proposta";
-  document.getElementById("pBtnCancelarEdicao").style.display = "none";
-  document.getElementById("pData").value = todayISO();
-  document.getElementById("pIpva").value = "";
-  document.getElementById("pEmplacamento").value = "1.400,00";
-  document.getElementById("pIpvaEmplacTotal").value = "";
-  document.getElementById("pObsBonusFabrica").value = "Observação: Os descontos informados nesta proposta correspondem às campanhas oficiais da Volkswagen. Em determinadas negociações, é possível oferecer condições comerciais ainda mais atrativas, proporcionando um valor final ainda melhor para a compra do seu veículo.";
-  marcarProdutosFinanciamento([]);
-  cortesiaAtiva = false;
-  document.getElementById("pBtnCortesia").classList.remove("ativo");
-  document.getElementById("pBtnCortesia").textContent = "🎁 Cortesia";
-  updatePropostaTotal();
-  resetTaxasContainer();
-  atualizarCamposProposta();
-});
-document.getElementById("pBtnCancelarEdicao").addEventListener("click", ()=>{
-  document.getElementById("formProposta").reset();
-  document.getElementById("pEditId").value = "";
-  document.getElementById("pData").value = todayISO();
-  document.getElementById("pIpva").value = "";
-  document.getElementById("pEmplacamento").value = "1.400,00";
-  document.getElementById("pIpvaEmplacTotal").value = "";
-  document.getElementById("pObsBonusFabrica").value = "Observação: Os descontos informados nesta proposta correspondem às campanhas oficiais da Volkswagen. Em determinadas negociações, é possível oferecer condições comerciais ainda mais atrativas, proporcionando um valor final ainda melhor para a compra do seu veículo.";
-  marcarProdutosFinanciamento([]);
-  cortesiaAtiva = false;
-  document.getElementById("pBtnCortesia").classList.remove("ativo");
-  document.getElementById("pBtnCortesia").textContent = "🎁 Cortesia";
-  document.getElementById("pBtnSubmit").textContent = "Salvar proposta";
-  document.getElementById("pBtnCancelarEdicao").style.display = "none";
-  updatePropostaTotal();
-  resetTaxasContainer();
-  atualizarCamposProposta();
-});
-
 document.getElementById("formCliente").addEventListener("submit", e=>{
   e.preventDefault();
   const veiSel = document.getElementById("clVei").value;
@@ -1014,13 +746,6 @@ document.getElementById("btnSalvarConfig").addEventListener("click", ()=>{
     metaConsorcios: +document.getElementById("cfgMetaConsorcio").value||0,
     metaVD: +document.getElementById("cfgMetaVD").value||0,
     metaRepasses: +document.getElementById("cfgMetaRepasse").value||0,
-    metaLig: +document.getElementById("cfgLig").value||0,
-    metaWpp: +document.getElementById("cfgWpp").value||0,
-    metaStories: +document.getElementById("cfgSto").value||0,
-    metaReels: +document.getElementById("cfgRee").value||0,
-    metaFeed: +document.getElementById("cfgFeed").value||0,
-    metaOfertas: +document.getElementById("cfgOfe").value||0,
-    diasAlerta: +document.getElementById("cfgAlerta").value||7,
     taxaVD: +document.getElementById("cfgTaxaVD").value||0,
   });
   // O resto é da loja toda (compartilhado), não do vendedor individual.
@@ -1050,12 +775,6 @@ document.getElementById("olhoComissaoBtn").addEventListener("click", (e)=>{
 document.getElementById("btnVerPedidos").addEventListener("click", abrirPedidosModal);
 document.getElementById("btnComissaoFinal").addEventListener("click", abrirRelatorioComissao);
 
-document.getElementById("btnSalvarMetaInsta").addEventListener("click", ()=>{
-  const v = +document.getElementById("instaMetaInput").value || 0;
-  metasDoVendedorAtual().metaSeguidores = v;
-  persist(); renderAll();
-});
-
 document.getElementById("btnSalvarMetaSalario").addEventListener("click", ()=>{
   const v = +document.getElementById("metaSalarioInput").value || 0;
   metasDoVendedorAtual().metaSalario = v;
@@ -1073,7 +792,7 @@ document.addEventListener("click", (e)=>{
   }
 });
 
-document.getElementById("extMes").value = state && state.config ? state.config.mesRef : new Date().toISOString().slice(0,7);
+document.getElementById("extMes").value = state && state.config ? state.config.mesRef : todayISO().slice(0,7);
 document.getElementById("btnExtratoAtualizar").addEventListener("click", renderExtrato);
 document.getElementById("btnImprimir").addEventListener("click", ()=>{ renderExtrato(); window.print(); });
 
@@ -1115,15 +834,6 @@ document.getElementById("btnAbrirSalarios").addEventListener("click", ()=>{
   renderSalarios();
   renderPontoCalendario();
 });
-document.getElementById("cfgRoteiroLigacao").addEventListener("change", ()=>{
-  state.config.roteiroLigacaoMsg = document.getElementById("cfgRoteiroLigacao").value;
-  persist();
-});
-document.getElementById("cfgRoteiroWhats").addEventListener("change", ()=>{
-  state.config.roteiroWhatsMsg = document.getElementById("cfgRoteiroWhats").value;
-  persist();
-});
-document.getElementById("btnRoteiroLigacoes").addEventListener("click", baixarRoteiroLigacoes);
 document.getElementById("formFeriado").addEventListener("submit", e=>{
   e.preventDefault();
   state.feriadosCustom.push({

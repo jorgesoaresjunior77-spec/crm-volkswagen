@@ -2,7 +2,18 @@
 
 /* ============================= HELPERS ============================= */
 function fmtDate(iso){ if(!iso) return "—"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
+// Usa o horário LOCAL do navegador (não UTC). new Date().toISOString() converte
+// pra UTC antes de formatar — no Brasil (UTC-3), isso faz o "hoje"/"mês atual"
+// virar o dia/mês seguinte várias horas antes da meia-noite local (ex: 31/08 às
+// 21h local já vira 01/09 em UTC). Era essa a causa de vendas do fim do mês
+// caírem no mês seguinte. getFullYear/getMonth/getDate sempre leem no fuso local.
+function todayISO(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const dia = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${dia}`;
+}
 function diasNoMes(mesRef){ const [y,m]=mesRef.split("-").map(Number); return new Date(y,m,0).getDate(); }
 
 /* ============================= FERIADOS E DIAS ÚTEIS =============================
@@ -757,11 +768,4 @@ function moedaInputG(el, campo){
     e.target.setSelectionRange(novoCursor, novoCursor);
     calcularGerente(); persistDebounced();
   });
-}
-
-function docFmtData(iso){
-  if (!iso) return { dia:"____", mes:"__________", ano:"____" };
-  const meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
-  const [y,m,d] = iso.split("-").map(Number);
-  return { dia:String(d).padStart(2,"0"), mes:meses[m-1], ano:String(y) };
 }
