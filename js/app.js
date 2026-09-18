@@ -499,22 +499,21 @@ document.getElementById("gerenteArquivoJson").addEventListener("change", async e
   if (!f) return;
   try{
     const texto = await f.text();
-    const p = JSON.parse(texto);
-    const regras = Array.isArray(p) ? p : p.regras;
-    if (!Array.isArray(regras) || !regras.length) throw new Error("Arquivo sem regras.");
+    const qtdAntes = state.gerente.politica ? state.gerente.politica.regras.length : 0;
+    // Substituição completa: construirPoliticaImportada() sempre devolve a política
+    // INTEIRA nova — nunca soma/mescla com o que já estava carregado.
+    const novaPolitica = construirPoliticaImportada(texto, f.name.replace(/\.json$/i,""), todayISO());
     if (state.gerente.politica){
       state.gerente.historico.push({ nome: state.gerente.politica.nome, dataCarregada: state.gerente.politica.dataCarregada, qtdRegras: state.gerente.politica.regras.length });
     }
-    state.gerente.politica = {
-      nome: (p.nome || f.name.replace(/\.json$/i,"")),
-      dataCarregada: todayISO(),
-      regras: regras.map(x=>Object.assign({m:"",v:"",c:"",am:[],op:null,de:null,ate:null,nf:0,ti:0,bv:0,rede:0,tot:0,tx:"",obs:""}, x)),
-    };
+    state.gerente.politica = novaPolitica;
+    const qtdDepois = state.gerente.politica.regras.length;
+    console.log(`[Importar regras] "${f.name}": ${qtdAntes} regra(s) antes → ${qtdDepois} regra(s) depois (substituição completa).`);
     state.gerente.est = {modelo:"", versao:"", ano:"", fat:"", dias:null, preco:0, usado:0, gerPct:state.gerente.est.gerPct||3, op:null, marcaTroca:""};
     persist();
     renderGerentePoliticaAtualBox();
     renderGerenteForm();
-    gSt.innerHTML = `<div class="nota-g" style="color:var(--green);font-weight:700;">✅ Importadas ${regras.length} regras de "${f.name}". Já é a política em uso — confira o cálculo antes de fechar negócio.</div>`;
+    gSt.innerHTML = `<div class="nota-g" style="color:var(--green);font-weight:700;">✅ Importadas ${qtdDepois} regras de "${f.name}" (substituiu as ${qtdAntes} regras anteriores). Já é a política em uso — confira o cálculo antes de fechar negócio.</div>`;
   }catch(err){
     gSt.innerHTML = `<div class="nota-g" style="color:var(--red);">Não consegui ler esse arquivo: ${err.message}</div>`;
   }

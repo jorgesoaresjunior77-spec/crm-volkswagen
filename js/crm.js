@@ -2140,6 +2140,13 @@ function regraExigeTrocaVW(r){
   const obs = (r.obs||"").toLowerCase();
   return obs.includes("exclusivo loyalty") || (obs.includes("somente") && obs.includes("volkswagen"));
 }
+// Bônus Fidelidade VW: quando o cliente troca por um veículo Volkswagen E a regra tem
+// ti_fid cadastrado, o trade-in usa ti_fid/tot_fid em vez de ti/tot. Se ti_fid for
+// null/ausente, o modelo/versão não tem esse bônus e o cálculo continua em ti/tot.
+function tradeInEfetivo(regra, marcaTroca){
+  const usaFidelidade = marcaTroca === "Volkswagen" && regra.ti_fid != null;
+  return { ti: usaFidelidade ? regra.ti_fid : regra.ti, tot: usaFidelidade ? regra.tot_fid : regra.tot };
+}
 function buscarG(){
   const est = state.gerente.est;
   const p = state.gerente.politica;
@@ -2210,15 +2217,16 @@ function calcularGerente(){
     box.hidden = false;
     if (!est.op) est.op = ops[0];
     const linhasPorOp = ops.map(o=>achadas.find(x=>x.op===o));
-    // Cada opção usa SEMPRE a taxa (r.tx) e o trade-in (r.ti) da sua PRÓPRIA linha
-    // de regra — nunca um "split" adivinhado por posição/contagem de chips. Essa
+    // Cada opção usa SEMPRE a taxa (r.tx) e o trade-in (tradeInEfetivo(r,...)) da sua
+    // PRÓPRIA linha de regra — nunca um "split" adivinhado por posição/contagem de chips. Essa
     // é a mesma fonte de verdade usada mais abaixo, no cálculo central, quando uma
     // opção é selecionada (reg = achadas.find(op===est.op)) — garante que o painel
     // esquerdo nunca mostre uma taxa vinculada a um trade-in que não é o dela.
     document.getElementById("g-opcoes").innerHTML = ops.map((o,idx)=>{
       const r = linhasPorOp[idx];
+      const { ti } = tradeInEfetivo(r, est.marcaTroca);
       return `<div class="g-opt ${est.op===o?'sel':''}" data-op="${o}">
-        <span class="t">${r.tx||"—"}</span><span class="v">trade-in ${BRL0G(r.ti)}</span></div>`;
+        <span class="t">${r.tx||"—"}</span><span class="v">trade-in ${BRL0G(ti)}</span></div>`;
     }).join("");
     document.querySelectorAll("#g-opcoes .g-opt").forEach(el=>{
       el.addEventListener("click", ()=>{ est.op = +el.dataset.op; calcularGerente(); persist(); });
@@ -2255,7 +2263,8 @@ function calcularGerente(){
   const gerPctEfetivo = gerPctFixo!=null ? gerPctFixo : est.gerPct;
   atualizarCampoDescontoGerenteUI(gerPctFixo);
 
-  const bonusVW = reg.nf + reg.ti + reg.bv;
+  const { ti: tiEfetivo, tot: totEfetivo } = tradeInEfetivo(reg, est.marcaTroca);
+  const bonusVW = reg.nf + tiEfetivo + reg.bv;
   const naNota = est.preco - reg.nf;
   const subtotal1 = naNota;                 // depois do desconto em nota fiscal
   const subtotal2 = subtotal1 - reg.bv;      // depois do bônus varejo
@@ -2263,7 +2272,7 @@ function calcularGerente(){
   const descGer = subtotal2 * (gerPctEfetivo/100);
   document.getElementById("g-ger-valor").value = est.preco ? NUMFG(descGer) : "";
   const precoFim = subtotal2 - descGer;
-  const credito = est.usado + reg.ti;
+  const credito = est.usado + tiEfetivo;
   const saldo = precoFim - credito;
 
   let avisos = "";
@@ -2273,8 +2282,8 @@ function calcularGerente(){
   if (reg.obs) avisos += `<div class="g-aviso amarelo"><b>${reg.obs.startsWith("⚠")?"Verificar":"Observação"}</b>${reg.obs.replace("⚠ ","")}</div>`;
 
   const rede = reg.rede||0;
-  const somaComp = reg.nf+reg.ti+reg.bv;
-  const bate = Math.abs(somaComp+rede-reg.tot)<1;
+  const somaComp = reg.nf+tiEfetivo+reg.bv;
+  const bate = Math.abs(somaComp+rede-totEfetivo)<1;
   const cor = bate ? "var(--text-dim)" : "var(--red)";
 
   const taxasParsed = parseTaxasElegiveis(reg.tx).sort((a,b)=>{
@@ -2284,7 +2293,7 @@ function calcularGerente(){
   });
 
   document.getElementById("btnImprimirResultadoGerente").style.display = "inline-block";
-  ultimoResultadoGerente = { est:{...est}, reg, bonusVW, naNota, subtotal1, subtotal2, precoFim, credito, saldo, descGer, conflito, rede, bate, taxasParsed, gerPctEfetivo, gerPctFixo };
+  ultimoResultadoGerente = { est:{...est}, reg, bonusVW, naNota, subtotal1, subtotal2, precoFim, credito, saldo, descGer, conflito, rede, bate, taxasParsed, gerPctEfetivo, gerPctFixo, tiEfetivo, totEfetivo };
 
   const chipsHTML = taxasParsed.length ? taxasParsed.map(t=>`<span class="g-taxa-chip">${t.label}</span>`).join("") :
     (reg.tx ? reg.tx.split(" · ").map(t=>`<span class="g-taxa-chip">${t}</span>`).join("") : '<span class="g-taxa-chip">—</span>');
@@ -2315,8 +2324,8 @@ function calcularGerente(){
   ${avisos}
   <div class="g-resumo">
     <div><div class="rot">Bônus da fábrica</div><div class="n">${BRL0G(bonusVW)}</div>
-      <div class="peq">NF ${BRL0G(reg.nf)} · trade ${BRL0G(reg.ti)} · varejo ${BRL0G(reg.bv)}</div></div>
-    <div><div class="rot">Total na circular</div><div class="n" style="color:${cor}">${BRL0G(reg.tot)}</div>
+      <div class="peq">NF ${BRL0G(reg.nf)} · trade ${BRL0G(tiEfetivo)} · varejo ${BRL0G(reg.bv)}</div></div>
+    <div><div class="rot">Total na circular</div><div class="n" style="color:${cor}">${BRL0G(totEfetivo)}</div>
       <div class="peq" style="color:${cor}">${bate?(rede?"inclui "+BRL0G(rede)+" de participação rede, fora do cálculo":"sem participação rede"):"não bate — confira a regra"}</div></div>
     <div><div class="rot">Regra aplicada</div><div class="peq" style="margin-top:5px;line-height:1.45;">${reg.m} ${reg.v}${est.cor?" · "+est.cor:""}<br>${est.ano} · fat. ${dtG(est.fat).toLocaleDateString("pt-BR")}${est.pacotes?"<br>🧩 "+est.pacotes:""}</div></div>
   </div>
@@ -2346,7 +2355,7 @@ function calcularGerente(){
   <div class="g-etapa">
     <div class="g-etapa-titulo">🚙 Carro do Cliente</div>
     ${linhaG("Valor pago no usado", est.usado)}
-    ${linhaG("+ Trade-in da ação", reg.ti, "abate", ["fábrica","f"])}
+    ${linhaG("+ Trade-in da ação", tiEfetivo, "abate", ["fábrica","f"])}
     <div class="g-etapa-total">Crédito do usado: <b>${moneyFmt(credito)}</b></div>
   </div>
 
@@ -2358,7 +2367,7 @@ function calcularGerente(){
   </div>` : `
   <div style="color:var(--text-dim);font-size:13px;padding:10px 0;">
     Informe o preço de tabela para ver o desconto de gerente, o preço final e o saldo.<br>
-    O trade-in dessa regra é <b>${moneyFmt(reg.ti)}</b> e entra no crédito do usado.
+    O trade-in dessa regra é <b>${moneyFmt(tiEfetivo)}</b> e entra no crédito do usado.
   </div>`}
 
   <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-light);">
@@ -2371,7 +2380,7 @@ function calcularGerente(){
 function imprimirResultadoGerente(){
   const r = ultimoResultadoGerente;
   if (!r){ alert("Calcule um resultado antes de imprimir."); return; }
-  const { est, reg, bonusVW, naNota, subtotal1, subtotal2, precoFim, credito, saldo, descGer, conflito, rede, bate, gerPctEfetivo, gerPctFixo } = r;
+  const { est, reg, bonusVW, naNota, subtotal1, subtotal2, precoFim, credito, saldo, descGer, conflito, rede, bate, gerPctEfetivo, gerPctFixo, tiEfetivo, totEfetivo } = r;
   const vendedor = (state.config && state.config.vendedor) || "";
   const linhaImp = (rot, val, corTxt)=> `<tr><td>${rot}</td><td style="text-align:right;${corTxt?`color:${corTxt};`:''}">${val!=null?moneyFmt(val):"—"}</td></tr>`;
   const listaTaxasImp = (r.taxasParsed && r.taxasParsed.length) ? r.taxasParsed : [null];
@@ -2434,7 +2443,7 @@ function imprimirResultadoGerente(){
       <div class="tit">Carro do cliente</div>
       <table>
         ${linhaImp("Valor pago no usado", est.usado)}
-        ${linhaImp("+ Trade-in da ação", reg.ti, "#1FA463")}
+        ${linhaImp("+ Trade-in da ação", tiEfetivo, "#1FA463")}
         ${linhaImp("= Crédito do usado", credito)}
       </table>
 
@@ -2445,7 +2454,7 @@ function imprimirResultadoGerente(){
         <div class="num">${moneyFmt(Math.abs(saldo))}</div>
       </div>` : `<div class="aviso">Preço de tabela não informado nessa simulação.</div>`}
 
-      <div style="font-size:10.5px;color:#888;margin-top:12px;">Total impresso na circular: ${moneyFmt(reg.tot)}${rede?` (inclui ${moneyFmt(rede)} de participação rede, fora do cálculo)`:""}${!bate?" — atenção: os valores não batem, confira a regra na política.":""}</div>
+      <div style="font-size:10.5px;color:#888;margin-top:12px;">Total impresso na circular: ${moneyFmt(totEfetivo)}${rede?` (inclui ${moneyFmt(rede)} de participação rede, fora do cálculo)`:""}${!bate?" — atenção: os valores não batem, confira a regra na política.":""}</div>
     </div>`;
   }).join("");
 
@@ -2898,3 +2907,6 @@ function cancelarEdicaoSalario(){
   document.getElementById("salBtnSubmit").textContent = "Salvar salário";
   document.getElementById("salBtnCancelarEdicao").style.display = "none";
 }
+
+// Exporta só a função pura (sem dependência de DOM/state) para testes em Node.
+if (typeof module !== "undefined" && module.exports) module.exports = { tradeInEfetivo };
